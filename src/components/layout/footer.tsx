@@ -72,6 +72,11 @@ export function Footer() {
                 Wishlist
               </Link>
             </li>
+            <li>
+              <Link href="/nda" className="hover:text-pink">
+                Demo NDA
+              </Link>
+            </li>
           </ul>
         </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { Toaster } from "sonner";
+import { DemoAccessGate } from "@/components/legal/demo-access-gate";
 import { useIsClient } from "@/hooks/use-is-client";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -9,6 +10,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <>
       {children}
+      {mounted && <DemoAccessGate />}
       {mounted && (
         <Toaster
           position="top-center"
