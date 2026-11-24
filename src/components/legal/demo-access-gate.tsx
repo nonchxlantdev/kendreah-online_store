@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import {
@@ -14,22 +14,29 @@ import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "kendreah-demo-nda-accepted";
 
-type GatePhase = "checking" | "gate" | "welcome" | "clearing" | "done";
+type GatePhase = "gate" | "welcome" | "clearing" | "done";
+
+const emptySubscribe = () => () => {};
+
+function readAccepted(): boolean {
+  try {
+    return window.localStorage.getItem(STORAGE_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
 
 export function DemoAccessGate() {
   const reduce = useReducedMotion();
-  const [phase, setPhase] = useState<GatePhase>("checking");
+  const hydrated = useSyncExternalStore(emptySubscribe, () => true, () => false);
+  const alreadyAccepted = useSyncExternalStore(
+    emptySubscribe,
+    readAccepted,
+    () => true
+  );
+  const [phase, setPhase] = useState<GatePhase>("gate");
   const [showNda, setShowNda] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-
-  useEffect(() => {
-    try {
-      const saved = window.localStorage.getItem(STORAGE_KEY);
-      setPhase(saved === "1" ? "done" : "gate");
-    } catch {
-      setPhase("gate");
-    }
-  }, []);
 
   useEffect(() => {
     if (phase !== "welcome") return;
@@ -95,7 +102,7 @@ export function DemoAccessGate() {
       "https://github.com/nonchxlantdev/kendreah-online_store";
   };
 
-  if (phase === "checking" || phase === "done") return null;
+  if (!hydrated || alreadyAccepted || phase === "done") return null;
 
   const showOverlay =
     phase === "gate" || phase === "welcome" || phase === "clearing";
