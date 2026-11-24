@@ -108,6 +108,7 @@ export default function CheckoutPage() {
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (lines.length === 0) {
       router.replace("/cart");
       return;
@@ -171,28 +172,80 @@ export default function CheckoutPage() {
       : "Postal code (optional)";
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-      <div className="mb-8">
-        <p className="text-xs uppercase tracking-[0.2em] text-muted">
+    <div className="mx-auto max-w-6xl px-3 py-6 sm:px-6 sm:py-10 lg:py-14">
+      <div className="mb-5 sm:mb-8">
+        <p className="text-[10px] uppercase tracking-[0.2em] text-muted sm:text-xs">
           Ken&apos; Dreah
         </p>
-        <h1 className="mt-1 font-display text-3xl text-ink sm:text-4xl">
+        <h1 className="mt-1 font-display text-2xl font-extrabold uppercase tracking-tight text-ink sm:text-4xl">
           Checkout
         </h1>
       </div>
 
-      <div className="mb-8 border border-gold/40 bg-gold/10 px-4 py-3 text-sm text-ink">
+      <div className="mb-5 border border-gold/40 bg-gold/10 px-3 py-2.5 text-[13px] text-ink sm:mb-8 sm:px-4 sm:py-3 sm:text-sm">
         <strong className="font-semibold">Demo checkout.</strong> No real
         payment is processed. Shipping rates are illustrative only.
       </div>
 
+      {/* Mobile expandable order summary */}
+      <details className="mb-6 border border-border bg-soft-white lg:hidden">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium marker:content-none [&::-webkit-details-marker]:hidden">
+          <span>Order summary ({lines.length})</span>
+          <span className="font-bold tabular-nums">{formatUSD(total)}</span>
+        </summary>
+        <div className="border-t border-border px-4 py-4">
+          <ul className="space-y-3">
+            {lines.map(({ item, product }) => (
+              <li key={item.key} className="flex gap-3">
+                <div className="relative h-14 w-12 shrink-0 bg-warm-grey">
+                  <Image
+                    src={product.images[0]}
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                    sizes="48px"
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium text-ink">
+                    {product.name}
+                  </p>
+                  <p className="text-xs text-muted">
+                    Qty {item.quantity}
+                    {(item.color || item.size) &&
+                      ` · ${[item.color, item.size].filter(Boolean).join(" · ")}`}
+                  </p>
+                </div>
+                <p className="text-sm font-semibold tabular-nums">
+                  {formatUSD(product.price * item.quantity)}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-4 space-y-1.5 border-t border-border pt-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted">Subtotal</span>
+              <span className="tabular-nums">{formatUSD(subtotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted">{shippingInfo.label}</span>
+              <span className="tabular-nums">{formatUSD(shipping)}</span>
+            </div>
+            <div className="flex justify-between pt-1 font-semibold">
+              <span>Total</span>
+              <span className="tabular-nums">{formatUSD(total)}</span>
+            </div>
+          </div>
+        </div>
+      </details>
+
       <form
         onSubmit={handleSubmit}
-        className="grid gap-10 lg:grid-cols-[1fr_360px]"
+        className="grid gap-8 pb-24 lg:grid-cols-[1fr_360px] lg:gap-10 lg:pb-0"
       >
-        <div className="space-y-8">
+        <div className="space-y-7 sm:space-y-8">
           <section className="space-y-4">
-            <h2 className="font-display text-xl text-ink">Contact</h2>
+            <h2 className="font-display text-lg text-ink sm:text-xl">Contact</h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="fullName">Full name</Label>
@@ -233,7 +286,9 @@ export default function CheckoutPage() {
           </section>
 
           <section className="space-y-4">
-            <h2 className="font-display text-xl text-ink">Shipping address</h2>
+            <h2 className="font-display text-lg text-ink sm:text-xl">
+              Shipping address
+            </h2>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="country">Country</Label>
@@ -244,7 +299,7 @@ export default function CheckoutPage() {
                   onChange={(e) =>
                     updateField("country", e.target.value as ShippingCountry)
                   }
-                  className="flex h-11 w-full border border-border bg-white px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink"
+                  className="flex h-11 w-full border border-border bg-white px-3 py-2 text-base text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink sm:text-sm"
                 >
                   <option value="Belize">Belize</option>
                   <option value="United States">United States</option>
@@ -301,7 +356,7 @@ export default function CheckoutPage() {
           </section>
 
           <section className="space-y-4">
-            <h2 className="font-display text-xl text-ink">Payment</h2>
+            <h2 className="font-display text-lg text-ink sm:text-xl">Payment</h2>
             <p className="text-xs text-muted">
               Demonstration only — no card numbers or payment credentials are
               collected.
@@ -347,7 +402,7 @@ export default function CheckoutPage() {
           </section>
         </div>
 
-        <aside className="h-fit border border-border bg-soft-white p-6 lg:sticky lg:top-24">
+        <aside className="hidden h-fit border border-border bg-soft-white p-6 lg:sticky lg:top-24 lg:block">
           <h2 className="font-display text-xl text-ink">Order summary</h2>
           <ul className="mt-5 max-h-64 space-y-4 overflow-y-auto">
             {lines.map(({ item, product }) => (
@@ -409,6 +464,32 @@ export default function CheckoutPage() {
             <Link href="/cart">Back to cart</Link>
           </Button>
         </aside>
+
+        {/* Mobile sticky place order */}
+        <div
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white/95 px-3 py-3 backdrop-blur lg:hidden"
+          style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+        >
+          <div className="mx-auto flex max-w-lg items-center gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-wider text-muted">
+                Total
+              </p>
+              <p className="text-base font-bold tabular-nums text-ink">
+                {formatUSD(total)}
+              </p>
+            </div>
+            <Button
+              type="submit"
+              variant="default"
+              size="lg"
+              className="ml-auto flex-1"
+              disabled={submitting}
+            >
+              {submitting ? "Placing…" : "Place Demo Order"}
+            </Button>
+          </div>
+        </div>
       </form>
     </div>
   );

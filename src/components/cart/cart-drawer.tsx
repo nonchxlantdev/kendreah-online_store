@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useEffect } from "react";
 import { Minus, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatUSD } from "@/lib/utils";
@@ -28,6 +29,22 @@ export function CartDrawer() {
     (sum, { item, product }) => sum + product.price * item.quantity,
     0
   );
+  const count = lines.reduce((n, l) => n + l.item.quantity, 0);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeCart();
+    };
+    document.addEventListener("keydown", onKey);
+    const { body } = document;
+    const prev = body.style.overflow;
+    body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      body.style.overflow = prev;
+    };
+  }, [isOpen, closeCart]);
 
   if (!isOpen) return null;
 
@@ -39,12 +56,23 @@ export function CartDrawer() {
         aria-label="Close bag"
         onClick={closeCart}
       />
-      <aside className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-white shadow-2xl">
-        <div className="flex items-center justify-between border-b border-border px-5 py-4">
+      <aside
+        className="absolute inset-y-0 right-0 flex w-full max-w-md flex-col bg-white shadow-2xl"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Shopping bag"
+      >
+        <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-5 sm:py-4">
           <h2 className="font-display text-sm font-bold uppercase tracking-[0.14em]">
-            Your bag ({lines.reduce((n, l) => n + l.item.quantity, 0)})
+            Your bag ({count})
           </h2>
-          <button type="button" aria-label="Close bag" onClick={closeCart}>
+          <button
+            type="button"
+            aria-label="Close bag"
+            className="flex h-10 w-10 items-center justify-center"
+            onClick={closeCart}
+          >
             <X className="h-5 w-5" />
           </button>
         </div>
@@ -63,10 +91,14 @@ export function CartDrawer() {
           </div>
         ) : (
           <>
-            <div className="flex-1 space-y-4 overflow-y-auto px-5 py-4">
+            <div className="flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
               {lines.map(({ item, product }) => (
-                <div key={item.key} className="flex gap-3">
-                  <div className="relative h-24 w-20 shrink-0 bg-neutral">
+                <div key={item.key} className="flex gap-3 sm:gap-4">
+                  <Link
+                    href={`/product/${product.slug}`}
+                    onClick={closeCart}
+                    className="relative h-28 w-20 shrink-0 bg-neutral sm:h-24 sm:w-20"
+                  >
                     <Image
                       src={product.images[0]}
                       alt={product.name}
@@ -74,41 +106,47 @@ export function CartDrawer() {
                       className="object-cover"
                       sizes="80px"
                     />
-                  </div>
+                  </Link>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="text-sm font-medium">{product.name}</p>
-                        <p className="text-xs text-muted">
+                      <div className="min-w-0">
+                        <Link
+                          href={`/product/${product.slug}`}
+                          onClick={closeCart}
+                          className="text-sm font-medium leading-snug hover:text-pink"
+                        >
+                          {product.name}
+                        </Link>
+                        <p className="mt-0.5 text-xs text-muted">
                           {[item.color, item.size].filter(Boolean).join(" · ")}
                         </p>
                       </div>
                       <button
                         type="button"
-                        className="text-xs text-muted hover:text-pink"
+                        className="shrink-0 px-1 py-1 text-xs text-muted hover:text-pink"
                         onClick={() => removeItem(item.key)}
                       >
                         Remove
                       </button>
                     </div>
-                    <div className="mt-2 flex items-center justify-between">
+                    <div className="mt-3 flex items-center justify-between gap-2">
                       <div className="flex items-center border border-border">
                         <button
                           type="button"
-                          className="px-2 py-1"
+                          className="flex h-10 w-10 items-center justify-center"
                           aria-label="Decrease quantity"
                           onClick={() =>
                             updateQuantity(item.key, item.quantity - 1)
                           }
                         >
-                          <Minus className="h-3 w-3" />
+                          <Minus className="h-3.5 w-3.5" />
                         </button>
-                        <span className="min-w-6 text-center text-sm">
+                        <span className="min-w-8 text-center text-sm font-medium">
                           {item.quantity}
                         </span>
                         <button
                           type="button"
-                          className="px-2 py-1"
+                          className="flex h-10 w-10 items-center justify-center disabled:opacity-40"
                           aria-label="Increase quantity"
                           disabled={item.quantity >= product.stock}
                           onClick={() =>
@@ -118,7 +156,7 @@ export function CartDrawer() {
                             )
                           }
                         >
-                          <Plus className="h-3 w-3" />
+                          <Plus className="h-3.5 w-3.5" />
                         </button>
                       </div>
                       <p className="text-sm font-bold tabular-nums">
@@ -129,7 +167,7 @@ export function CartDrawer() {
                 </div>
               ))}
             </div>
-            <div className="border-t border-border px-5 py-4">
+            <div className="border-t border-border px-4 py-4 sm:px-5">
               <div className="mb-1 flex justify-between text-sm">
                 <span className="font-medium">Subtotal</span>
                 <span className="font-bold tabular-nums">
@@ -141,7 +179,7 @@ export function CartDrawer() {
                 USA.
               </p>
               <div className="grid gap-2">
-                <Button asChild variant="default" onClick={closeCart}>
+                <Button asChild variant="default" size="lg" onClick={closeCart}>
                   <Link href="/checkout">Checkout</Link>
                 </Button>
                 <Button asChild variant="outline" onClick={closeCart}>

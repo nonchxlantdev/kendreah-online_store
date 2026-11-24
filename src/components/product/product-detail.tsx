@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -72,6 +72,7 @@ export function ProductDetail({ product }: { product: Product }) {
   const [color, setColor] = useState<string | undefined>();
   const [qty, setQty] = useState(1);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
+  const touchStartX = useRef<number | null>(null);
 
   const soldOut = product.status === "sold_out" || product.stock <= 0;
   const maxQty = Math.max(0, product.stock);
@@ -138,8 +139,8 @@ export function ProductDetail({ product }: { product: Product }) {
     (product.compareAtPrice as number) > product.price;
 
   return (
-    <div className="mx-auto max-w-[1400px] px-4 py-6 lg:px-8 lg:py-10">
-      <nav aria-label="Breadcrumb" className="mb-5 text-xs text-muted">
+    <div className="mx-auto max-w-[1400px] px-3 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-4 sm:px-4 sm:pb-10 sm:py-6 lg:px-8 lg:py-10">
+      <nav aria-label="Breadcrumb" className="mb-3 text-[11px] text-muted sm:mb-5 sm:text-xs">
         <ol className="flex flex-wrap items-center gap-1.5">
           <li>
             <Link href="/" className="hover:text-pink">
@@ -168,10 +169,24 @@ export function ProductDetail({ product }: { product: Product }) {
         </ol>
       </nav>
 
-      <div className="grid gap-8 lg:grid-cols-2 lg:gap-12">
+      <div className="grid gap-6 lg:grid-cols-2 lg:gap-12">
         {/* Gallery */}
         <div>
-          <div className="relative aspect-[4/5] overflow-hidden bg-neutral">
+          <div
+            className="relative aspect-[4/5] overflow-hidden bg-neutral touch-pan-y"
+            onTouchStart={(e) => {
+              touchStartX.current = e.changedTouches[0]?.clientX ?? null;
+            }}
+            onTouchEnd={(e) => {
+              if (touchStartX.current == null || images.length < 2) return;
+              const dx =
+                (e.changedTouches[0]?.clientX ?? 0) - touchStartX.current;
+              touchStartX.current = null;
+              if (Math.abs(dx) < 40) return;
+              if (dx < 0) goNext();
+              else goPrev();
+            }}
+          >
             <Image
               src={images[imageIndex]}
               alt={`${product.name} — image ${imageIndex + 1}`}
@@ -179,6 +194,7 @@ export function ProductDetail({ product }: { product: Product }) {
               priority
               sizes="(max-width: 1024px) 100vw, 50vw"
               className="object-cover"
+              draggable={false}
             />
             {soldOut && (
               <div className="absolute left-3 top-3">
@@ -201,7 +217,7 @@ export function ProductDetail({ product }: { product: Product }) {
                   type="button"
                   aria-label="Previous image"
                   onClick={goPrev}
-                  className="absolute left-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center bg-white/95 text-ink transition hover:bg-white"
+                  className="absolute left-2 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center bg-white/95 text-ink transition hover:bg-white sm:flex"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
@@ -209,15 +225,31 @@ export function ProductDetail({ product }: { product: Product }) {
                   type="button"
                   aria-label="Next image"
                   onClick={goNext}
-                  className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center bg-white/95 text-ink transition hover:bg-white"
+                  className="absolute right-2 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center bg-white/95 text-ink transition hover:bg-white sm:flex"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </button>
+                <div className="absolute inset-x-0 bottom-3 flex justify-center gap-1.5 sm:hidden">
+                  {images.map((_, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      aria-label={`Go to image ${i + 1}`}
+                      onClick={() => setImageIndex(i)}
+                      className={cn(
+                        "h-1.5 rounded-full transition-all",
+                        i === imageIndex
+                          ? "w-5 bg-white"
+                          : "w-1.5 bg-white/55"
+                      )}
+                    />
+                  ))}
+                </div>
               </>
             )}
           </div>
           {images.length > 1 && (
-            <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
+            <div className="mt-3 hidden gap-2 overflow-x-auto pb-1 sm:flex">
               {images.map((src, i) => (
                 <button
                   key={src + i}
@@ -247,14 +279,14 @@ export function ProductDetail({ product }: { product: Product }) {
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-pink">
             {DEPARTMENT_LABELS[product.department]}
           </p>
-          <h1 className="mt-2 font-display text-2xl font-extrabold uppercase tracking-tight text-ink md:text-3xl">
+          <h1 className="mt-2 font-display text-xl font-extrabold uppercase tracking-tight text-ink sm:text-2xl md:text-3xl">
             {product.name}
           </h1>
 
-          <div className="mt-4 flex flex-wrap items-baseline gap-3">
+          <div className="mt-3 flex flex-wrap items-baseline gap-3 sm:mt-4">
             <span
               className={cn(
-                "text-2xl font-bold tabular-nums",
+                "text-xl font-bold tabular-nums sm:text-2xl",
                 onSale ? "text-pink" : "text-ink"
               )}
             >
@@ -381,7 +413,7 @@ export function ProductDetail({ product }: { product: Product }) {
             </div>
           )}
 
-          <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+          <div className="mt-8 hidden flex-col gap-3 sm:flex sm:flex-row sm:flex-wrap">
             <Button
               type="button"
               variant="default"
@@ -395,7 +427,7 @@ export function ProductDetail({ product }: { product: Product }) {
             </Button>
             <Button
               type="button"
-              variant="default"
+              variant="pink"
               size="lg"
               className="flex-1 sm:min-w-[10rem]"
               disabled={soldOut}
@@ -403,7 +435,6 @@ export function ProductDetail({ product }: { product: Product }) {
             >
               Buy now
             </Button>
-            {/* Primary purchase actions */}
             <Button
               type="button"
               variant="outline"
@@ -428,41 +459,73 @@ export function ProductDetail({ product }: { product: Product }) {
             </Button>
           </div>
 
+          {/* Mobile purchase actions (non-sticky duplicate for flow) */}
+          <div className="mt-6 flex gap-2 sm:hidden">
+            <Button
+              type="button"
+              variant="outline"
+              size="lg"
+              className="px-3"
+              aria-label={
+                inWishlist ? "Remove from wishlist" : "Add to wishlist"
+              }
+              onClick={() => {
+                wishlistToggle(product.id);
+                toast.success(
+                  inWishlist ? "Removed from wishlist" : "Saved to wishlist"
+                );
+              }}
+            >
+              <Heart
+                className={cn(
+                  "h-4 w-4",
+                  inWishlist && "fill-pink text-pink"
+                )}
+              />
+            </Button>
+            <Button
+              type="button"
+              variant="pink"
+              size="lg"
+              className="flex-1"
+              disabled={soldOut}
+              onClick={() => addToCart(true)}
+            >
+              Buy now
+            </Button>
+          </div>
+
           <p className="mt-5 text-sm text-ink">
             Ships to Belize &amp; the United States.
           </p>
 
-          <div className="mt-8 border-t border-border pt-6">
-            <h2 className="font-display text-sm font-bold uppercase tracking-wider text-ink">
-              Description
-            </h2>
-            <p className="mt-3 text-sm leading-relaxed text-muted whitespace-pre-line">
-              {product.description}
-            </p>
-          </div>
-
-          {specsEntries.length > 0 && (
-            <div className="mt-6">
-              <h2 className="font-display text-sm font-bold uppercase tracking-wider text-ink">
-                Specifications
-              </h2>
-              <dl className="mt-3 divide-y divide-border border border-border">
-                {specsEntries.map(([key, value]) => (
-                  <div
-                    key={key}
-                    className="grid grid-cols-[8rem_1fr] gap-3 px-3 py-2.5 text-sm sm:grid-cols-[10rem_1fr]"
-                  >
-                    <dt className="font-medium capitalize text-ink">
-                      {key.replace(/([A-Z])/g, " $1").trim()}
-                    </dt>
-                    <dd className="text-muted">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </div>
-          )}
-
-          <Accordion type="single" collapsible className="mt-8">
+          <Accordion type="single" collapsible className="mt-8" defaultValue="description">
+            <AccordionItem value="description">
+              <AccordionTrigger>Description</AccordionTrigger>
+              <AccordionContent>
+                <p className="whitespace-pre-line">{product.description}</p>
+              </AccordionContent>
+            </AccordionItem>
+            {specsEntries.length > 0 && (
+              <AccordionItem value="specs">
+                <AccordionTrigger>Specifications</AccordionTrigger>
+                <AccordionContent>
+                  <dl className="divide-y divide-border border border-border">
+                    {specsEntries.map(([key, value]) => (
+                      <div
+                        key={key}
+                        className="grid grid-cols-[7rem_1fr] gap-3 px-3 py-2.5 text-sm sm:grid-cols-[10rem_1fr]"
+                      >
+                        <dt className="font-medium capitalize text-ink">
+                          {key.replace(/([A-Z])/g, " $1").trim()}
+                        </dt>
+                        <dd className="text-muted">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </AccordionContent>
+              </AccordionItem>
+            )}
             <AccordionItem value="shipping">
               <AccordionTrigger>Shipping information</AccordionTrigger>
               <AccordionContent>
@@ -500,20 +563,57 @@ export function ProductDetail({ product }: { product: Product }) {
       </div>
 
       {related.length > 0 && (
-        <section className="mt-16 border-t border-border pt-12 lg:mt-20">
-          <h2 className="font-display text-xl font-extrabold uppercase tracking-tight text-ink md:text-2xl">
+        <section className="mt-10 border-t border-border pt-8 sm:mt-16 sm:pt-12 lg:mt-20">
+          <h2 className="font-display text-lg font-extrabold uppercase tracking-tight text-ink sm:text-xl md:text-2xl">
             You may also like
           </h2>
-          <p className="mt-2 text-muted">
+          <p className="mt-1 text-sm text-muted sm:mt-2">
             More from {DEPARTMENT_LABELS[product.department]}.
           </p>
-          <div className="mt-8 grid grid-cols-2 gap-x-3 gap-y-8 md:grid-cols-4">
+          <div className="mt-5 grid grid-cols-2 gap-x-2 gap-y-6 sm:mt-8 sm:gap-x-3 sm:gap-y-8 md:grid-cols-4">
             {related.map((p, i) => (
               <ProductCard key={p.id} product={p} index={i} />
             ))}
           </div>
         </section>
       )}
+
+      {/* Sticky mobile Add to Bag */}
+      <div
+        className="fixed inset-x-0 z-30 border-t border-border bg-white/95 px-3 py-2.5 backdrop-blur sm:hidden"
+        style={{
+          bottom: "calc(3.5rem + env(safe-area-inset-bottom))",
+        }}
+      >
+        <div className="mx-auto flex max-w-lg items-center gap-3">
+          <div className="min-w-0">
+            <p
+              className={cn(
+                "text-base font-bold tabular-nums",
+                onSale ? "text-pink" : "text-ink"
+              )}
+            >
+              {formatUSD(product.price)}
+            </p>
+            {onSale && (
+              <p className="text-[11px] text-muted line-through tabular-nums">
+                {formatUSD(product.compareAtPrice!)}
+              </p>
+            )}
+          </div>
+          <Button
+            type="button"
+            variant="default"
+            size="lg"
+            className="ml-auto flex-1"
+            disabled={soldOut}
+            onClick={() => addToCart(false)}
+          >
+            <ShoppingBag className="h-4 w-4" />
+            {soldOut ? "Sold out" : "Add to bag"}
+          </Button>
+        </div>
+      </div>
 
       <Dialog open={sizeGuideOpen} onOpenChange={setSizeGuideOpen}>
         <DialogContent className="max-w-lg">

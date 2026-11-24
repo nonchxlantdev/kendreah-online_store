@@ -130,11 +130,11 @@ export function ProductCard({
           </button>
 
           {!soldOut && (
-            <div className="absolute inset-x-0 bottom-0 z-10 translate-y-full bg-ink p-2 transition duration-300 group-hover:translate-y-0 max-md:translate-y-0">
+            <div className="absolute inset-x-0 bottom-0 z-10 translate-y-0 bg-ink/95 p-1.5 opacity-100 transition duration-300 sm:translate-y-full sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100 sm:p-2">
               <Button
                 size="sm"
                 variant="pink"
-                className="w-full"
+                className="h-9 w-full text-[10px] sm:h-9 sm:text-[11px]"
                 onClick={handleQuickAdd}
               >
                 <ShoppingBag className="h-3.5 w-3.5" />
@@ -147,7 +147,7 @@ export function ProductCard({
         <div className="mt-3 space-y-1.5">
           <Link
             href={`/product/${product.slug}`}
-            className="block text-[13px] font-medium leading-snug text-ink hover:text-pink"
+            className="line-clamp-2 block min-h-[2.5rem] text-[12px] font-medium leading-snug text-ink hover:text-pink sm:text-[13px]"
           >
             {product.name}
           </Link>

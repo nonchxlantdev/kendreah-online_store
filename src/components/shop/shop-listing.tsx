@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { SlidersHorizontal, X } from "lucide-react";
 import { ProductCard } from "@/components/product/product-card";
@@ -40,6 +40,21 @@ export function ShopListing({
   const products = useCatalogStore((s) => s.products);
 
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [mobileOpen]);
+
   const [localFilters, setLocalFilters] = useState<
     Pick<
       ProductFiltersState,
@@ -182,10 +197,15 @@ export function ShopListing({
     : "Fashion, footwear and home essentials — priced in USD.";
 
   const showSizes = filters.department !== "appliances";
+  const activeFilterCount =
+    (filters.sizes?.length ?? 0) +
+    (filters.colors?.length ?? 0) +
+    (filters.onSale ? 1 : 0) +
+    (filters.minPrice != null || filters.maxPrice != null ? 1 : 0);
 
   return (
-    <div className="mx-auto max-w-[1400px] px-4 py-6 lg:px-8 lg:py-8">
-      <nav aria-label="Breadcrumb" className="mb-4 text-xs text-muted">
+    <div className="mx-auto max-w-[1400px] px-3 py-4 sm:px-4 sm:py-6 lg:px-8 lg:py-8">
+      <nav aria-label="Breadcrumb" className="mb-3 text-[11px] text-muted sm:mb-4 sm:text-xs">
         <ol className="flex flex-wrap items-center gap-1.5">
           <li>
             <Link href="/" className="hover:text-pink">
@@ -209,27 +229,38 @@ export function ShopListing({
         </ol>
       </nav>
 
-      <header className="mb-5 flex flex-wrap items-end justify-between gap-3 border-b border-border pb-4">
-        <div>
-          <h1 className="font-display text-2xl font-extrabold uppercase tracking-tight md:text-3xl">
+      <header className="mb-4 flex flex-wrap items-end justify-between gap-2 border-b border-border pb-3 sm:mb-5 sm:gap-3 sm:pb-4">
+        <div className="min-w-0">
+          <h1 className="font-display text-xl font-extrabold uppercase tracking-tight sm:text-2xl md:text-3xl">
             {heading}
           </h1>
-          <p className="mt-1 text-sm text-muted">{description}</p>
+          <p className="mt-1 line-clamp-2 text-[12px] text-muted sm:text-sm">
+            {description}
+          </p>
         </div>
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted">
+        <p className="hidden text-xs font-semibold uppercase tracking-wider text-muted sm:block">
           {filtered.length} {filtered.length === 1 ? "item" : "items"}
         </p>
       </header>
 
-      <div className="mb-4 flex items-center justify-between gap-3 lg:hidden">
+      <div className="mb-3 flex items-center gap-2 lg:hidden">
+        <p className="mr-auto text-[11px] font-semibold uppercase tracking-wider text-muted">
+          {filtered.length} {filtered.length === 1 ? "item" : "items"}
+        </p>
         <Button
           type="button"
           variant="outline"
           size="sm"
+          className="h-10"
           onClick={() => setMobileOpen(true)}
         >
           <SlidersHorizontal className="h-4 w-4" />
-          Filters
+          Filter
+          {activeFilterCount > 0 && (
+            <span className="ml-1 bg-pink px-1.5 text-[10px] text-white">
+              {activeFilterCount}
+            </span>
+          )}
         </Button>
         <select
           value={filters.sort ?? "newest"}
@@ -240,11 +271,11 @@ export function ShopListing({
             })
           }
           aria-label="Sort products"
-          className="h-9 border border-border bg-white px-2 text-xs font-semibold uppercase tracking-wider text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink"
+          className="h-10 max-w-[9.5rem] border border-border bg-white px-2 text-[11px] font-semibold uppercase tracking-wider text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink"
         >
           <option value="newest">Newest</option>
-          <option value="price-asc">Price: Low–High</option>
-          <option value="price-desc">Price: High–Low</option>
+          <option value="price-asc">Price ↑</option>
+          <option value="price-desc">Price ↓</option>
         </select>
       </div>
 
@@ -271,9 +302,9 @@ export function ShopListing({
         </div>
       )}
 
-      <div className="grid gap-8 lg:grid-cols-[220px_minmax(0,1fr)]">
+      <div className="grid gap-8 lg:grid-cols-[240px_minmax(0,1fr)] xl:grid-cols-[260px_minmax(0,1fr)]">
         <div className="hidden lg:block">
-          <div className="sticky top-24">
+          <div className="sticky top-[calc(4.5rem+2.75rem)] max-h-[calc(100dvh-7.5rem)] overflow-y-auto overscroll-contain [-ms-overflow-style:none] [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden">
             <ProductFilters
               filters={filters}
               options={options}
@@ -325,7 +356,7 @@ export function ShopListing({
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-x-3 gap-y-8 md:grid-cols-3 xl:grid-cols-4 xl:gap-x-4">
+            <div className="grid grid-cols-2 gap-x-2 gap-y-6 sm:gap-x-3 sm:gap-y-8 md:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 xl:gap-x-4">
               {filtered.map((product, i) => (
                 <ProductCard key={product.id} product={product} index={i} />
               ))}
@@ -342,7 +373,10 @@ export function ShopListing({
             className="absolute inset-0 bg-ink/50"
             onClick={() => setMobileOpen(false)}
           />
-          <div className="absolute inset-y-0 right-0 flex w-full max-w-sm flex-col bg-white shadow-xl">
+          <div
+            className="absolute inset-x-0 bottom-0 flex max-h-[92dvh] w-full flex-col rounded-t-2xl bg-white shadow-xl sm:inset-y-0 sm:right-0 sm:left-auto sm:max-h-none sm:max-w-sm sm:rounded-none"
+            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+          >
             <div className="flex items-center justify-between border-b border-border px-4 py-3">
               <h2 className="font-display text-sm font-bold uppercase tracking-wider">
                 Filters
@@ -350,12 +384,13 @@ export function ShopListing({
               <button
                 type="button"
                 aria-label="Close"
+                className="flex h-10 w-10 items-center justify-center"
                 onClick={() => setMobileOpen(false)}
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="flex-1 overflow-y-auto px-4 py-5">
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <ProductFilters
                 filters={filters}
                 options={options}
@@ -363,16 +398,20 @@ export function ShopListing({
                 onClear={handleClear}
                 lockDepartment={Boolean(department)}
                 hideSizes={!showSizes}
+                hideHeader
+                hideSort
               />
             </div>
-            <div className="border-t border-border p-4">
+            <div className="grid grid-cols-2 gap-2 border-t border-border p-4">
+              <Button type="button" variant="outline" onClick={handleClear}>
+                Clear all
+              </Button>
               <Button
                 type="button"
                 variant="default"
-                className="w-full"
                 onClick={() => setMobileOpen(false)}
               >
-                Show {filtered.length} items
+                Apply ({filtered.length})
               </Button>
             </div>
           </div>

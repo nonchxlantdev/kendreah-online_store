@@ -89,6 +89,18 @@ h4 {
   outline-offset: 2px;
 }
 
+/* Form controls use their own focus treatment — skip the global pink outline */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

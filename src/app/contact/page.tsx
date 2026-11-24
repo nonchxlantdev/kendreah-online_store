@@ -19,14 +19,14 @@ export default function ContactPage() {
   return (
     <main>
       <section className="border-b border-border bg-warm-grey">
-        <div className="mx-auto max-w-7xl px-4 py-16 lg:px-8 lg:py-20">
-          <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted">
+        <div className="mx-auto max-w-7xl px-3 py-10 sm:px-4 sm:py-14 lg:px-8 lg:py-20">
+          <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-muted sm:text-xs">
             Get in touch
           </p>
-          <h1 className="mt-4 font-display text-4xl text-ink md:text-5xl">
+          <h1 className="mt-3 font-display text-3xl text-ink sm:mt-4 sm:text-4xl md:text-5xl">
             Contact
           </h1>
-          <p className="mt-5 max-w-2xl text-muted">
+          <p className="mt-4 max-w-2xl text-sm text-muted sm:mt-5 sm:text-base">
             Questions about products, shipping destinations or the planned 2027
             launch? Send a message below. Direct channels will be confirmed
             before we go live.
@@ -34,10 +34,10 @@ export default function ContactPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-16 lg:px-8">
-        <div className="grid gap-10 lg:grid-cols-12">
+      <section className="mx-auto max-w-7xl px-3 py-10 sm:px-4 sm:py-14 lg:px-8 lg:py-16">
+        <div className="grid gap-8 lg:grid-cols-12 lg:gap-10">
           <div className="lg:col-span-7">
-            <h2 className="font-display text-2xl text-ink md:text-3xl">
+            <h2 className="font-display text-xl text-ink sm:text-2xl md:text-3xl">
               Send a message
             </h2>
             <p className="mt-2 text-sm text-muted">

@@ -1,22 +1,10 @@
 import { CreditCard, DollarSign, Globe2, ShoppingBag } from "lucide-react";
 
 const ITEMS = [
-  {
-    icon: Globe2,
-    title: "Shipping to Belize & USA",
-  },
-  {
-    icon: DollarSign,
-    title: "Shop in USD",
-  },
-  {
-    icon: ShoppingBag,
-    title: "Convenient shopping",
-  },
-  {
-    icon: CreditCard,
-    title: "Secure checkout at launch",
-  },
+  { icon: Globe2, title: "Shipping to Belize & USA" },
+  { icon: DollarSign, title: "Shop in USD" },
+  { icon: ShoppingBag, title: "Convenient shopping" },
+  { icon: CreditCard, title: "Secure checkout at launch" },
 ];
 
 export function TrustStrip() {
@@ -26,10 +14,10 @@ export function TrustStrip() {
         {ITEMS.map(({ icon: Icon, title }) => (
           <div
             key={title}
-            className="flex items-center justify-center gap-2.5 bg-white px-4 py-4 text-center"
+            className="flex items-center justify-center gap-2 bg-white px-3 py-3 text-center sm:px-4 sm:py-4"
           >
-            <Icon className="h-4 w-4 shrink-0 text-pink" aria-hidden />
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-ink sm:text-xs">
+            <Icon className="h-3.5 w-3.5 shrink-0 text-pink sm:h-4 sm:w-4" aria-hidden />
+            <p className="text-[9px] font-semibold uppercase leading-snug tracking-[0.06em] text-ink sm:text-[11px] sm:tracking-[0.08em]">
               {title}
             </p>
           </div>

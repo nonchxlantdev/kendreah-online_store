@@ -31,6 +31,7 @@ export default function CartPage() {
     (sum, { item, product }) => sum + product.price * item.quantity,
     0
   );
+  const itemCount = lines.reduce((n, { item }) => n + item.quantity, 0);
 
   if (!mounted) {
     return (
@@ -42,10 +43,10 @@ export default function CartPage() {
 
   if (lines.length === 0) {
     return (
-      <div className="mx-auto flex min-h-[50vh] max-w-6xl flex-col items-center justify-center px-4 py-20 text-center sm:px-6">
+      <div className="mx-auto flex min-h-[50vh] max-w-6xl flex-col items-center justify-center px-4 py-16 text-center sm:px-6 sm:py-20">
         <ShoppingBag className="mb-4 h-10 w-10 text-muted" strokeWidth={1.25} />
-        <h1 className="font-display text-3xl text-ink sm:text-4xl">
-          Your cart is empty
+        <h1 className="font-display text-2xl font-extrabold uppercase tracking-tight text-ink sm:text-4xl">
+          Your bag is empty
         </h1>
         <p className="mt-3 max-w-md text-sm text-muted">
           Discover trendy finds across clothes, footwear and home essentials.
@@ -58,109 +59,113 @@ export default function CartPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
-      <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+    <div className="mx-auto max-w-6xl px-3 pb-[calc(5.5rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 sm:pb-14 sm:py-10 lg:pb-14">
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3 sm:mb-8 sm:gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">
+          <p className="text-[10px] uppercase tracking-[0.2em] text-muted sm:text-xs">
             Ken&apos; Dreah
           </p>
-          <h1 className="mt-1 font-display text-3xl text-ink sm:text-4xl">
-            Your cart
+          <h1 className="mt-1 font-display text-2xl font-extrabold uppercase tracking-tight text-ink sm:text-4xl">
+            Your bag
           </h1>
         </div>
         <p className="text-sm text-muted">
-          {lines.reduce((n, { item }) => n + item.quantity, 0)} item
-          {lines.reduce((n, { item }) => n + item.quantity, 0) === 1 ? "" : "s"}
+          {itemCount} item{itemCount === 1 ? "" : "s"}
         </p>
       </div>
 
-      <div className="grid gap-10 lg:grid-cols-[1fr_320px]">
+      <div className="grid gap-8 lg:grid-cols-[1fr_320px] lg:gap-10">
         <div className="space-y-0 divide-y divide-border border-y border-border">
           {lines.map(({ item, product }) => (
-            <div key={item.key} className="flex gap-4 py-5 sm:gap-5">
-              <Link
-                href={`/product/${product.slug}`}
-                className="relative h-28 w-20 shrink-0 bg-warm-grey sm:h-32 sm:w-24"
-              >
-                <Image
-                  src={product.images[0]}
-                  alt={product.name}
-                  fill
-                  className="object-cover"
-                  sizes="96px"
-                />
-              </Link>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <Link
-                      href={`/product/${product.slug}`}
-                      className="text-sm font-medium text-ink hover:text-pink sm:text-base"
-                    >
-                      {product.name}
-                    </Link>
-                    {(item.size || item.color) && (
-                      <p className="mt-1 text-xs text-muted">
-                        {[item.color, item.size].filter(Boolean).join(" · ")}
+            <div
+              key={item.key}
+              className="flex flex-col gap-3 py-5 sm:flex-row sm:gap-5"
+            >
+              <div className="flex gap-3 sm:gap-5">
+                <Link
+                  href={`/product/${product.slug}`}
+                  className="relative h-28 w-20 shrink-0 bg-warm-grey sm:h-32 sm:w-24"
+                >
+                  <Image
+                    src={product.images[0]}
+                    alt={product.name}
+                    fill
+                    className="object-cover"
+                    sizes="96px"
+                  />
+                </Link>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <Link
+                        href={`/product/${product.slug}`}
+                        className="text-sm font-medium text-ink hover:text-pink sm:text-base"
+                      >
+                        {product.name}
+                      </Link>
+                      {(item.size || item.color) && (
+                        <p className="mt-1 text-xs text-muted">
+                          {[item.color, item.size].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
+                      <p className="mt-2 text-sm font-semibold text-ink">
+                        {formatUSD(product.price)}
                       </p>
-                    )}
-                    <p className="mt-2 text-sm font-semibold text-ink">
-                      {formatUSD(product.price)}
+                    </div>
+                    <button
+                      type="button"
+                      className="shrink-0 text-xs text-muted underline-offset-2 hover:text-pink hover:underline"
+                      onClick={() => removeItem(item.key)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                  <div className="mt-4 flex items-center justify-between gap-3">
+                    <div className="flex items-center border border-border">
+                      <button
+                        type="button"
+                        className="flex h-10 w-10 items-center justify-center text-ink transition hover:bg-warm-grey"
+                        aria-label="Decrease quantity"
+                        onClick={() =>
+                          updateQuantity(item.key, item.quantity - 1)
+                        }
+                      >
+                        <Minus className="h-3.5 w-3.5" />
+                      </button>
+                      <span className="min-w-8 text-center text-sm font-medium">
+                        {item.quantity}
+                      </span>
+                      <button
+                        type="button"
+                        className="flex h-10 w-10 items-center justify-center text-ink transition hover:bg-warm-grey disabled:opacity-40"
+                        aria-label="Increase quantity"
+                        disabled={item.quantity >= product.stock}
+                        onClick={() =>
+                          updateQuantity(
+                            item.key,
+                            Math.min(product.stock, item.quantity + 1)
+                          )
+                        }
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                    <p className="text-sm font-semibold text-ink tabular-nums">
+                      {formatUSD(product.price * item.quantity)}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    className="shrink-0 text-xs text-muted underline-offset-2 hover:text-pink hover:underline"
-                    onClick={() => removeItem(item.key)}
-                  >
-                    Remove
-                  </button>
-                </div>
-                <div className="mt-4 flex items-center justify-between gap-3">
-                  <div className="flex items-center border border-border">
-                    <button
-                      type="button"
-                      className="px-3 py-2 text-ink transition hover:bg-warm-grey"
-                      aria-label="Decrease quantity"
-                      onClick={() =>
-                        updateQuantity(item.key, item.quantity - 1)
-                      }
-                    >
-                      <Minus className="h-3.5 w-3.5" />
-                    </button>
-                    <span className="min-w-8 text-center text-sm font-medium">
-                      {item.quantity}
-                    </span>
-                    <button
-                      type="button"
-                      className="px-3 py-2 text-ink transition hover:bg-warm-grey disabled:opacity-40"
-                      aria-label="Increase quantity"
-                      disabled={item.quantity >= product.stock}
-                      onClick={() =>
-                        updateQuantity(
-                          item.key,
-                          Math.min(product.stock, item.quantity + 1)
-                        )
-                      }
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  <p className="text-sm font-semibold text-ink">
-                    {formatUSD(product.price * item.quantity)}
-                  </p>
                 </div>
               </div>
             </div>
           ))}
         </div>
 
-        <aside className="h-fit border border-border bg-soft-white p-6 lg:sticky lg:top-24">
+        <aside className="hidden h-fit border border-border bg-soft-white p-6 lg:sticky lg:top-24 lg:block">
           <h2 className="font-display text-xl text-ink">Order summary</h2>
           <div className="mt-5 space-y-3 text-sm">
             <div className="flex justify-between">
               <span className="text-muted">Subtotal</span>
-              <span className="font-semibold text-ink">
+              <span className="font-semibold text-ink tabular-nums">
                 {formatUSD(subtotal)}
               </span>
             </div>
@@ -178,6 +183,28 @@ export default function CartPage() {
             </Button>
           </div>
         </aside>
+      </div>
+
+      {/* Mobile sticky checkout */}
+      <div
+        className="fixed inset-x-0 z-30 border-t border-border bg-white/95 px-3 py-3 backdrop-blur lg:hidden"
+        style={{
+          bottom: "calc(3.5rem + env(safe-area-inset-bottom))",
+        }}
+      >
+        <div className="mx-auto flex max-w-lg items-center gap-3">
+          <div className="min-w-0">
+            <p className="text-[10px] uppercase tracking-wider text-muted">
+              Subtotal
+            </p>
+            <p className="text-base font-bold tabular-nums text-ink">
+              {formatUSD(subtotal)}
+            </p>
+          </div>
+          <Button asChild variant="default" size="lg" className="ml-auto flex-1">
+            <Link href="/checkout">Checkout</Link>
+          </Button>
+        </div>
       </div>
     </div>
   );

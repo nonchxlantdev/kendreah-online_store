@@ -5,7 +5,7 @@ import { CreditCard } from "lucide-react";
 export function Footer() {
   return (
     <footer className="bg-ink text-white">
-      <div className="mx-auto grid max-w-[1400px] gap-10 px-4 py-14 sm:grid-cols-2 lg:grid-cols-12 lg:px-8 lg:py-16">
+      <div className="mx-auto grid max-w-[1400px] gap-8 px-3 py-10 sm:grid-cols-2 sm:gap-10 sm:px-4 sm:py-14 lg:grid-cols-12 lg:px-8 lg:py-16">
         <div className="lg:col-span-4">
           <BrandLogo href={null} size="md" inverted showTagline />
           <p className="mt-5 max-w-xs text-sm text-white/65">

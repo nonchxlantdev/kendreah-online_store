@@ -31,43 +31,70 @@ export function BrandLogo({
   inverted = false,
 }: {
   href?: string | null;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   className?: string;
   showTagline?: boolean;
   inverted?: boolean;
 }) {
   const crown =
-    size === "sm" ? "h-5 w-7" : size === "lg" ? "h-10 w-14" : "h-7 w-10";
+    size === "xs"
+      ? "h-3.5 w-5"
+      : size === "sm"
+        ? "h-4 w-6"
+        : size === "lg"
+          ? "h-10 w-14"
+          : "h-7 w-10";
   const script =
-    size === "sm" ? "text-2xl" : size === "lg" ? "text-5xl" : "text-3xl";
-  const store = size === "sm" ? "text-[0.55rem]" : "text-[0.68rem]";
+    size === "xs"
+      ? "text-[1.25rem] leading-none"
+      : size === "sm"
+        ? "text-xl leading-none"
+        : size === "lg"
+          ? "text-5xl"
+          : "text-3xl";
+  const store =
+    size === "sm" ? "text-[0.5rem] leading-none" : "text-[0.68rem]";
+  const showStoreLabel = size !== "xs";
+  const inlineMobile = size === "xs";
 
   const content = (
     <span
       className={cn(
-        "inline-flex flex-col items-center text-center",
         inverted ? "text-white" : "text-ink",
+        inlineMobile
+          ? "inline-flex max-h-10 items-center gap-1.5"
+          : "inline-flex flex-col items-center justify-center text-center",
         className
       )}
     >
       <CrownIcon className={crown} />
       <span
         className={cn(
-          "script-wordmark mt-0.5",
-          script,
-          inverted ? "text-white" : "text-pink"
+          inlineMobile ? "inline-flex flex-col items-start" : "contents"
         )}
       >
-        Ken&apos; Dreah
-      </span>
-      <span
-        className={cn(
-          "store-label mt-1",
-          store,
-          inverted ? "text-white/80" : "text-ink/70"
+        <span
+          className={cn(
+            "script-wordmark",
+            !inlineMobile && "mt-0.5",
+            script,
+            inverted ? "text-white" : "text-pink"
+          )}
+        >
+          Ken&apos; Dreah
+        </span>
+        {showStoreLabel && (
+          <span
+            className={cn(
+              "store-label",
+              size === "sm" ? "mt-0.5" : "mt-1",
+              store,
+              inverted ? "text-white/80" : "text-ink/70"
+            )}
+          >
+            Online Store
+          </span>
         )}
-      >
-        Online Store
       </span>
       {showTagline && (
         <span
@@ -84,7 +111,11 @@ export function BrandLogo({
 
   if (!href) return content;
   return (
-    <Link href={href} className="inline-block" aria-label="Ken' Dreah Online Store home">
+    <Link
+      href={href}
+      className="inline-flex max-h-full items-center"
+      aria-label="Ken' Dreah Online Store home"
+    >
       {content}
     </Link>
   );

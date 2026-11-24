@@ -52,8 +52,15 @@ export function DemoAccessGate() {
     return () => window.clearTimeout(id);
   }, [phase, reduce]);
 
+  // Returning visitors skip the gate; same-session accept still plays Welcome
+  // even though localStorage is already written.
+  const showOverlay =
+    hydrated &&
+    phase !== "done" &&
+    !(alreadyAccepted && phase === "gate");
+
   useEffect(() => {
-    if (phase !== "gate" && phase !== "welcome" && phase !== "clearing") return;
+    if (!showOverlay) return;
 
     const { body, documentElement } = document;
     const scrollY = window.scrollY;
@@ -85,7 +92,7 @@ export function DemoAccessGate() {
       body.style.touchAction = previous.touchAction;
       window.scrollTo(0, scrollY);
     };
-  }, [phase]);
+  }, [showOverlay]);
 
   const accept = () => {
     if (!acceptedTerms) return;
@@ -102,10 +109,7 @@ export function DemoAccessGate() {
       "https://github.com/nonchxlantdev/kendreah-online_store";
   };
 
-  if (!hydrated || alreadyAccepted || phase === "done") return null;
-
-  const showOverlay =
-    phase === "gate" || phase === "welcome" || phase === "clearing";
+  if (!showOverlay) return null;
 
   return (
     <AnimatePresence>

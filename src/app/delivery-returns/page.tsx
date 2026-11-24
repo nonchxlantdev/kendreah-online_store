@@ -15,14 +15,14 @@ export default function DeliveryReturnsPage() {
   return (
     <main>
       <section className="border-b border-border bg-warm-grey">
-        <div className="mx-auto max-w-7xl px-4 py-16 lg:px-8 lg:py-20">
-          <p className="text-xs font-medium uppercase tracking-[0.22em] text-muted">
+        <div className="mx-auto max-w-7xl px-3 py-10 sm:px-4 sm:py-14 lg:px-8 lg:py-20">
+          <p className="text-[10px] font-medium uppercase tracking-[0.22em] text-muted sm:text-xs">
             Help
           </p>
-          <h1 className="mt-4 max-w-3xl font-display text-4xl text-ink md:text-5xl">
+          <h1 className="mt-3 max-w-3xl font-display text-3xl text-ink sm:mt-4 sm:text-4xl md:text-5xl">
             Delivery &amp; returns
           </h1>
-          <p className="mt-5 max-w-2xl text-muted">
+          <p className="mt-4 max-w-2xl text-sm text-muted sm:mt-5 sm:text-base">
             Ken&apos; Dreah Online Store ships to Belize and the United States.
             The sections below outline how delivery and returns will work.
             Specific rates, timelines and policy wording remain placeholders
@@ -31,9 +31,9 @@ export default function DeliveryReturnsPage() {
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-16 lg:px-8">
-        <div className="mb-10 max-w-2xl">
-          <h2 className="font-display text-3xl text-ink md:text-4xl">
+      <section className="mx-auto max-w-7xl px-3 py-10 sm:px-4 sm:py-14 lg:px-8 lg:py-16">
+        <div className="mb-6 max-w-2xl sm:mb-10">
+          <h2 className="font-display text-2xl text-ink sm:text-3xl md:text-4xl">
             Shipping destinations
           </h2>
           <p className="mt-3 text-muted">

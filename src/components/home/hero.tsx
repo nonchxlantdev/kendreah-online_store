@@ -10,42 +10,46 @@ export function Hero() {
   const reduce = useReducedMotion();
 
   return (
-    <section className="relative h-[min(72vw,620px)] min-h-[420px] w-full overflow-hidden bg-ink">
+    <section className="relative h-[min(68svh,520px)] w-full overflow-hidden bg-ink sm:h-[min(62vw,560px)] md:h-[min(58vw,600px)] lg:h-[min(52vw,620px)]">
       <Image
         src={withBase("/products/hero-campaign.jpg")}
         alt="Confident woman in contemporary fashion — Ken' Dreah campaign"
         fill
         priority
-        className="object-cover object-[center_20%] md:object-[center_25%]"
+        className="object-cover object-[68%_18%] sm:object-[60%_20%] md:object-[center_22%] lg:object-[center_25%]"
         sizes="100vw"
       />
-      <div className="absolute inset-0 bg-gradient-to-r from-ink/80 via-ink/45 to-ink/15" />
-      <div className="absolute inset-0 bg-gradient-to-t from-ink/50 via-transparent to-transparent md:hidden" />
+      <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-ink/35 to-ink/20 sm:bg-gradient-to-r sm:from-ink/80 sm:via-ink/45 sm:to-ink/10" />
 
-      <div className="relative mx-auto flex h-full max-w-[1400px] items-end px-4 pb-10 pt-16 sm:items-center sm:pb-0 lg:px-8">
+      <div className="relative mx-auto flex h-full max-w-[1400px] items-end px-4 pb-8 pt-10 sm:items-center sm:px-6 sm:pb-0 lg:px-8">
         <motion.div
           className="max-w-xl text-white"
-          initial={reduce ? false : { opacity: 0, y: 20 }}
+          initial={reduce ? false : { opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55 }}
+          transition={{ duration: 0.5 }}
         >
-          <p className="font-promo text-sm font-semibold uppercase tracking-[0.28em] text-pink-soft">
+          <p className="font-promo text-[11px] font-semibold uppercase tracking-[0.22em] text-pink-soft sm:text-sm sm:tracking-[0.28em]">
             The Ken&apos; Dreah Edit
           </p>
-          <h1 className="mt-3 font-display text-[clamp(2.5rem,7vw,4.5rem)] font-extrabold uppercase leading-[0.95] tracking-tight">
+          <h1 className="mt-2 font-display text-[clamp(2rem,9vw,4.5rem)] font-extrabold uppercase leading-[0.95] tracking-tight sm:mt-3">
             Your Style.
             <br />
             Your Rules.
           </h1>
-          <p className="mt-4 max-w-md text-sm text-white/85 sm:text-base">
+          <p className="mt-3 max-w-md text-[13px] leading-relaxed text-white/85 sm:mt-4 sm:text-sm md:text-base">
             Fashion, footwear and everyday essentials you&apos;ll love — at
             prices you&apos;ll love even more.
           </p>
-          <div className="mt-7 flex flex-wrap gap-3">
-            <Button asChild variant="pink" size="lg">
+          <div className="mt-5 flex flex-col gap-2.5 xs:flex-row sm:mt-7 sm:flex-row sm:flex-wrap sm:gap-3">
+            <Button asChild variant="pink" size="lg" className="w-full sm:w-auto">
               <Link href="/shop?sort=newest">Shop New Arrivals</Link>
             </Button>
-            <Button asChild variant="outline-white" size="lg">
+            <Button
+              asChild
+              variant="outline-white"
+              size="lg"
+              className="w-full sm:w-auto"
+            >
               <Link href="/shop">Explore Collections</Link>
             </Button>
           </div>
