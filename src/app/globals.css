@@ -1,26 +1,140 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --pink: #ec008c;
+  --pink-deep: #b80065;
+  --pink-soft: #f5b8d5;
+  --pink-blush: #fce4ef;
+  --ink: #150e13;
+  --white: #ffffff;
+  --off-white: #fafafa;
+  --neutral: #f4f4f4;
+  --muted: #666666;
+  --border: #e8e8e8;
+  --gold: #d4af37;
+  --gold-deep: #9a7611;
+  --success: #2f6b4f;
+  --danger: #b42318;
+  --radius: 0px;
+  --background: var(--white);
+  --foreground: var(--ink);
+  /* Legacy aliases used across components */
+  --black: var(--ink);
+  --soft-white: var(--white);
+  --warm-grey: var(--neutral);
+  --pink-soft-legacy: var(--pink-soft);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-pink: var(--pink);
+  --color-pink-deep: var(--pink-deep);
+  --color-pink-soft: var(--pink-soft);
+  --color-pink-blush: var(--pink-blush);
+  --color-ink: var(--ink);
+  --color-white: var(--white);
+  --color-off-white: var(--off-white);
+  --color-neutral: var(--neutral);
+  --color-gold: var(--gold);
+  --color-gold-deep: var(--gold-deep);
+  --color-soft-white: var(--white);
+  --color-warm-grey: var(--neutral);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-dm-sans);
+  --font-display: var(--font-montserrat);
+  --font-promo: var(--font-barlow);
+  --font-serif: var(--font-montserrat);
+  --font-script: var(--font-great-vibes);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-dm-sans), system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-montserrat), system-ui, sans-serif;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  font-weight: 700;
+  text-wrap: balance;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--pink) 28%, white);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 2px solid var(--pink);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.script-wordmark {
+  font-family: var(--font-great-vibes), cursive;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.store-label {
+  font-family: var(--font-montserrat), system-ui, sans-serif;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-size: 0.58rem;
+  font-weight: 600;
+}
+
+.font-display {
+  font-family: var(--font-montserrat), system-ui, sans-serif;
+}
+
+.font-promo {
+  font-family: var(--font-barlow), system-ui, sans-serif;
+}
+
+.tile-blush {
+  background: var(--pink-blush);
+}
+.tile-cream {
+  background: var(--off-white);
+}
+.tile-warm {
+  background: var(--neutral);
+}
+.tile-gold {
+  background: color-mix(in srgb, var(--gold) 18%, white);
+}
+.tile-ink {
+  background: var(--ink);
+  color: var(--white);
 }

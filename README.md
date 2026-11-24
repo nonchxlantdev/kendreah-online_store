@@ -1,36 +1,79 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Ken' Dreah Online Store
 
-## Getting Started
+High-fidelity e-commerce demonstration website for **Ken' Dreah Online Store** — a prospective online-only retail brand shipping to **Belize** and the **United States**, planned for launch in **2027**.
 
-First, run the development server:
+This is a client presentation demo. Product data, pricing, shipping rates and orders are illustrative. No live payments, databases or API keys are required.
+
+## Stack
+
+- Next.js (App Router) + TypeScript
+- Tailwind CSS
+- shadcn-style UI primitives (Radix)
+- Lucide React icons
+- Motion (subtle animations)
+- Zustand + LocalStorage (cart, wishlist, catalogue, orders)
+
+## Quick start
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+The production build is a static export in `out/` (required for GitHub Pages).
 
-## Learn More
+## Live demo
 
-To learn more about Next.js, take a look at the following resources:
+GitHub Pages: [https://nonchxlantdev.github.io/kendreah-online_store/](https://nonchxlantdev.github.io/kendreah-online_store/)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Repository: [https://github.com/nonchxlantdev/kendreah-online_store](https://github.com/nonchxlantdev/kendreah-online_store)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Pushes to `main` deploy automatically via GitHub Actions.
 
-## Deploy on Vercel
+## Demonstration routes
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Route | Purpose |
+| --- | --- |
+| `/` | Homepage |
+| `/shop` | Full catalogue with filters |
+| `/category/clothes` | Clothes department |
+| `/category/footwear` | Footwear department |
+| `/category/appliances` | Household appliances |
+| `/product/[slug]` | Product detail |
+| `/cart` | Cart page (+ slide-out drawer) |
+| `/checkout` | Simulated checkout (Belize / USA) |
+| `/order-confirmation` | Demo order receipt |
+| `/wishlist` | Saved products |
+| `/about` | Brand story |
+| `/delivery-returns` | Shipping & returns placeholders |
+| `/contact` | Contact form (simulated) |
+| `/admin` | Store management demo (not in primary nav) |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Client walkthrough
+
+1. Browse the homepage and open a category.
+2. Filter/search on `/shop`, open a product, select size/colour, add to cart.
+3. Use the cart drawer or `/cart`, then complete `/checkout` with Belize or USA.
+4. Confirm the order on `/order-confirmation`.
+5. Visit `/admin` to edit products/stock/orders — changes persist locally and appear on the storefront.
+6. Use **Reset Demo Data** under Admin → Settings to restore the sample catalogue and orders.
+
+## Brand
+
+- Hot Pink `#EC008C` · Black `#150E13` · Gold `#D4AF37` · Soft White `#FFF8FB`
+- Tagline: **Shop • Save • Enjoy**
+- Promise: **Trendy • Quality • Affordable**
+- Currency: **USD**
+- Payments (demo only): Stripe card flow + PayPal option — no real charges
+
+## Notes
+
+- `/admin` is an unauthenticated local prototype for presentation only.
+- Shipping amounts shown at checkout are labelled as illustrative demo rates.
+- Imagery is stored under `public/products/` for reliable offline demos.
