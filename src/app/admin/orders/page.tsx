@@ -1,285 +1,138 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Eye } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
+  AdminCard,
+  AdminPageHeader,
+  Money,
+  StatusPill,
+} from "@/components/admin/admin-ui";
+import type { OrderStatus, PaymentStatus, ShippingCountry } from "@/types";
 import { useOrderStore } from "@/store/order-store";
-import { formatUSD } from "@/lib/utils";
-import type { Order, OrderStatus } from "@/types";
 
-const STATUSES: OrderStatus[] = [
+const FULFILLMENT: Array<OrderStatus | "all"> = [
+  "all",
   "pending",
   "processing",
   "shipped",
   "delivered",
+  "cancelled",
 ];
-
-const STATUS_TONE: Record<OrderStatus, "ink" | "pink" | "gold" | "sale"> = {
-  pending: "gold",
-  processing: "pink",
-  shipped: "ink",
-  delivered: "sale",
-};
 
 export default function AdminOrdersPage() {
   const orders = useOrderStore((s) => s.orders);
-  const updateStatus = useOrderStore((s) => s.updateStatus);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
+  const [status, setStatus] = useState<OrderStatus | "all">("all");
+  const [payment, setPayment] = useState<PaymentStatus | "all">("all");
+  const [country, setCountry] = useState<ShippingCountry | "all">("all");
+  const [q, setQ] = useState("");
 
-  const sorted = useMemo(
-    () =>
-      [...orders].sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      ),
-    [orders]
-  );
-
-  const filtered = useMemo(
-    () =>
-      statusFilter === "all"
-        ? sorted
-        : sorted.filter((o) => o.status === statusFilter),
-    [sorted, statusFilter]
-  );
-
-  const selected: Order | undefined = orders.find((o) => o.id === selectedId);
+  const filtered = useMemo(() => {
+    return orders.filter((o) => {
+      if (status !== "all" && o.status !== status) return false;
+      if (payment !== "all" && o.paymentStatus !== payment) return false;
+      if (country !== "all" && o.shippingAddress.country !== country) return false;
+      if (
+        q &&
+        !o.orderNumber.toLowerCase().includes(q.toLowerCase()) &&
+        !o.shippingAddress.fullName.toLowerCase().includes(q.toLowerCase())
+      )
+        return false;
+      return true;
+    });
+  }, [orders, status, payment, country, q]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">
-            Demonstration orders
-          </p>
-          <h2 className="mt-1 font-serif text-2xl font-semibold text-ink">
-            Orders
-          </h2>
-          <p className="mt-2 text-sm text-muted">
-            Update fulfillment status — storefront order history uses the same
-            data.
-          </p>
-        </div>
-        <div className="space-y-1">
-          <Label htmlFor="statusFilter" className="text-xs text-muted">
-            Filter status
-          </Label>
-          <select
-            id="statusFilter"
-            value={statusFilter}
-            onChange={(e) =>
-              setStatusFilter(e.target.value as OrderStatus | "all")
-            }
-            className="flex h-11 min-w-[180px] border border-border bg-white px-3 text-sm"
-          >
-            <option value="all">All statuses</option>
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
+    <div>
+      <AdminPageHeader
+        title="Orders"
+        description="Fulfillment and payment statuses for simulated demo checkouts."
+      />
+      <AdminCard>
+        <div className="mb-4 flex flex-wrap gap-2">
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search orders…"
+            className="h-9 min-w-[12rem] flex-1 border border-border px-3 text-sm"
+          />
+          <select value={status} onChange={(e) => setStatus(e.target.value as OrderStatus | "all")} className="h-9 border border-border px-2 text-xs">
+            {FULFILLMENT.map((s) => (
+              <option key={s} value={s}>{s === "all" ? "All statuses" : s}</option>
             ))}
           </select>
+          <select value={payment} onChange={(e) => setPayment(e.target.value as PaymentStatus | "all")} className="h-9 border border-border px-2 text-xs">
+            <option value="all">All payments</option>
+            <option value="paid">Paid</option>
+            <option value="pending">Pending</option>
+            <option value="refunded">Refunded</option>
+            <option value="failed">Failed</option>
+          </select>
+          <select value={country} onChange={(e) => setCountry(e.target.value as ShippingCountry | "all")} className="h-9 border border-border px-2 text-xs">
+            <option value="all">All destinations</option>
+            <option value="Belize">Belize</option>
+            <option value="United States">United States</option>
+          </select>
         </div>
-      </div>
-
-      <div className="overflow-x-auto border border-border bg-soft-white">
-        <table className="w-full min-w-[800px] text-left text-sm">
-          <thead className="bg-warm-grey/70 text-[11px] uppercase tracking-wider text-muted">
-            <tr>
-              <th className="px-4 py-3 font-medium">Order</th>
-              <th className="px-4 py-3 font-medium">Customer</th>
-              <th className="px-4 py-3 font-medium">Items</th>
-              <th className="px-4 py-3 font-medium">Total</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Date</th>
-              <th className="px-4 py-3 font-medium text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-muted">
-                  No orders for this filter.
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[860px] text-left text-sm">
+            <thead className="text-[10px] uppercase tracking-wider text-admin-muted">
+              <tr className="border-b border-border">
+                <th className="py-2">Order</th>
+                <th className="py-2">Date</th>
+                <th className="py-2">Customer</th>
+                <th className="py-2">Destination</th>
+                <th className="py-2">Items</th>
+                <th className="py-2">Total</th>
+                <th className="py-2">Payment</th>
+                <th className="py-2">Fulfillment</th>
+                <th className="py-2" />
               </tr>
-            ) : (
-              filtered.map((order) => (
-                <tr key={order.id} className="border-t border-border">
-                  <td className="px-4 py-3 font-medium">{order.orderNumber}</td>
-                  <td className="px-4 py-3">
-                    <div>{order.shippingAddress.fullName}</div>
-                    <div className="text-xs text-muted">
-                      {order.shippingAddress.email}
-                    </div>
+            </thead>
+            <tbody>
+              {filtered.map((o) => (
+                <tr key={o.id} className="border-b border-border/70">
+                  <td className="py-2.5 font-medium">{o.orderNumber}</td>
+                  <td className="py-2.5 text-admin-muted">
+                    {new Date(o.createdAt).toLocaleDateString()}
                   </td>
-                  <td className="px-4 py-3">
-                    {order.items.reduce((n, i) => n + i.quantity, 0)}
+                  <td className="py-2.5">{o.shippingAddress.fullName}</td>
+                  <td className="py-2.5">{o.shippingAddress.country}</td>
+                  <td className="py-2.5 tabular-nums">
+                    {o.items.reduce((n, i) => n + i.quantity, 0)}
                   </td>
-                  <td className="px-4 py-3">{formatUSD(order.total)}</td>
-                  <td className="px-4 py-3">
-                    <select
-                      value={order.status}
-                      onChange={(e) =>
-                        updateStatus(order.id, e.target.value as OrderStatus)
+                  <td className="py-2.5"><Money amount={o.total} /></td>
+                  <td className="py-2.5">
+                    <StatusPill tone={o.paymentStatus === "paid" ? "success" : o.paymentStatus === "refunded" ? "warning" : "danger"}>
+                      {o.paymentStatus}
+                    </StatusPill>
+                  </td>
+                  <td className="py-2.5">
+                    <StatusPill
+                      tone={
+                        o.status === "delivered"
+                          ? "success"
+                          : o.status === "cancelled"
+                            ? "danger"
+                            : o.status === "pending"
+                              ? "warning"
+                              : "pink"
                       }
-                      className="h-9 border border-border bg-white px-2 text-xs capitalize"
-                      aria-label={`Status for ${order.orderNumber}`}
                     >
-                      {STATUSES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
+                      {o.status}
+                    </StatusPill>
                   </td>
-                  <td className="px-4 py-3 text-muted">
-                    {new Date(order.createdAt).toLocaleString()}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setSelectedId(order.id)}
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                      Detail
-                    </Button>
+                  <td className="py-2.5 text-right">
+                    <Link href={`/admin/orders/detail?id=${o.id}`} className="text-xs font-semibold text-pink">
+                      View
+                    </Link>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      <Dialog
-        open={!!selected}
-        onOpenChange={(open) => !open && setSelectedId(null)}
-      >
-        <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
-          {selected && (
-            <>
-              <DialogHeader>
-                <DialogTitle>{selected.orderNumber}</DialogTitle>
-                <DialogDescription>
-                  Demonstration order detail — not a live fulfillment system.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-5 text-sm">
-                <div className="flex flex-wrap items-center gap-3">
-                  <Badge tone={STATUS_TONE[selected.status]}>
-                    {selected.status}
-                  </Badge>
-                  <span className="text-muted">
-                    {new Date(selected.createdAt).toLocaleString()}
-                  </span>
-                </div>
-
-                <div>
-                  <Label className="text-xs text-muted">Update status</Label>
-                  <select
-                    value={selected.status}
-                    onChange={(e) =>
-                      updateStatus(selected.id, e.target.value as OrderStatus)
-                    }
-                    className="mt-1 flex h-11 w-full border border-border bg-white px-3 text-sm capitalize"
-                  >
-                    {STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="border border-border p-4">
-                  <p className="text-xs uppercase tracking-wider text-muted">
-                    Ship to
-                  </p>
-                  <p className="mt-2 font-medium">
-                    {selected.shippingAddress.fullName}
-                  </p>
-                  <p className="text-muted">{selected.shippingAddress.email}</p>
-                  <p className="text-muted">{selected.shippingAddress.phone}</p>
-                  <p className="mt-2">
-                    {selected.shippingAddress.street}
-                    <br />
-                    {selected.shippingAddress.city},{" "}
-                    {selected.shippingAddress.stateOrDistrict}{" "}
-                    {selected.shippingAddress.postalCode}
-                    <br />
-                    {selected.shippingAddress.country}
-                  </p>
-                </div>
-
-                <div>
-                  <p className="mb-2 text-xs uppercase tracking-wider text-muted">
-                    Items
-                  </p>
-                  <ul className="space-y-3">
-                    {selected.items.map((item, idx) => (
-                      <li
-                        key={`${item.productId}-${idx}`}
-                        className="flex gap-3 border-b border-border pb-3 last:border-0"
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={item.image}
-                          alt=""
-                          className="h-14 w-11 object-cover"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <p className="font-medium">{item.name}</p>
-                          <p className="text-xs text-muted">
-                            {[item.size, item.color].filter(Boolean).join(" · ") ||
-                              "—"}
-                          </p>
-                          <p className="text-xs text-muted">
-                            Qty {item.quantity} × {formatUSD(item.price)}
-                          </p>
-                        </div>
-                        <p className="font-medium">
-                          {formatUSD(item.price * item.quantity)}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="space-y-1 border-t border-border pt-3">
-                  <div className="flex justify-between">
-                    <span className="text-muted">Subtotal</span>
-                    <span>{formatUSD(selected.subtotal)}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted">Shipping</span>
-                    <span>{formatUSD(selected.shipping)}</span>
-                  </div>
-                  <div className="flex justify-between font-semibold">
-                    <span>Total</span>
-                    <span>{formatUSD(selected.total)}</span>
-                  </div>
-                  <p className="pt-1 text-xs capitalize text-muted">
-                    Payment: {selected.paymentMethod}
-                  </p>
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </AdminCard>
     </div>
   );
 }

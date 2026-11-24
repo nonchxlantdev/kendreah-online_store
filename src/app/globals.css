@@ -13,8 +13,12 @@
   --border: #e8e8e8;
   --gold: #d4af37;
   --gold-deep: #9a7611;
-  --success: #2f6b4f;
-  --danger: #b42318;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --info: #2563eb;
+  --admin-bg: #f7f8fa;
+  --admin-muted: #667085;
   --radius: 0px;
   --background: var(--white);
   --foreground: var(--ink);
@@ -43,7 +47,11 @@
   --color-muted: var(--muted);
   --color-border: var(--border);
   --color-success: var(--success);
+  --color-warning: var(--warning);
   --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-admin-bg: var(--admin-bg);
+  --color-admin-muted: var(--admin-muted);
   --font-sans: var(--font-dm-sans);
   --font-display: var(--font-montserrat);
   --font-promo: var(--font-barlow);

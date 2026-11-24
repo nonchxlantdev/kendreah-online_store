@@ -4,12 +4,27 @@ import Link from "next/link";
 import { ProductCard } from "@/components/product/product-card";
 import { Button } from "@/components/ui/button";
 import { useCatalogStore } from "@/store/catalog-store";
+import { useStorefrontStore } from "@/store/storefront-store";
 
 export function FeaturedProducts() {
   const products = useCatalogStore((s) => s.products);
-  const featured = products
-    .filter((p) => p.isFeatured && p.status !== "draft")
+  const featuredIds = useStorefrontStore((s) => s.published.featuredProductIds);
+
+  const byId = new Map(products.map((p) => [p.id, p]));
+  const featured = featuredIds
+    .map((id) => byId.get(id))
+    .filter(
+      (p): p is NonNullable<typeof p> =>
+        !!p && p.status !== "draft" && p.status !== "archived"
+    )
     .slice(0, 8);
+
+  const fallback =
+    featured.length > 0
+      ? featured
+      : products
+          .filter((p) => p.isFeatured && p.status !== "draft" && p.status !== "archived")
+          .slice(0, 8);
 
   return (
     <section className="mx-auto max-w-[1400px] px-3 py-8 sm:px-4 sm:py-10 lg:px-8 lg:py-14">
@@ -27,7 +42,7 @@ export function FeaturedProducts() {
         </Button>
       </div>
       <div className="grid grid-cols-2 gap-x-2 gap-y-6 sm:gap-x-3 sm:gap-y-8 md:grid-cols-3 lg:grid-cols-4 lg:gap-x-4">
-        {featured.map((product, i) => (
+        {fallback.map((product, i) => (
           <ProductCard key={product.id} product={product} index={i} />
         ))}
       </div>

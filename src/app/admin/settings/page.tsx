@@ -1,170 +1,208 @@
 "use client";
 
-import { useState } from "react";
-import { AlertTriangle, RotateCcw } from "lucide-react";
+import { toast } from "sonner";
+import { AdminCard, AdminPageHeader, StatusPill } from "@/components/admin/admin-ui";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { useCartStore } from "@/store/cart-store";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useActivityStore } from "@/store/activity-store";
 import { useCatalogStore } from "@/store/catalog-store";
+import { useCustomerStore } from "@/store/customer-store";
+import { useDiscountStore } from "@/store/discount-store";
+import { useInventoryStore } from "@/store/inventory-store";
 import { useOrderStore } from "@/store/order-store";
-import { useWishlistStore } from "@/store/wishlist-store";
-import { DEMO_SHIPPING_RATES } from "@/lib/shipping";
+import { useSettingsStore } from "@/store/settings-store";
+import { useShippingStore } from "@/store/shipping-store";
+import { useStorefrontStore } from "@/store/storefront-store";
 
 export default function AdminSettingsPage() {
-  const resetProducts = useCatalogStore((s) => s.resetProducts);
+  const settings = useSettingsStore((s) => s.settings);
+  const update = useSettingsStore((s) => s.update);
+  const resetSettings = useSettingsStore((s) => s.reset);
+  const log = useActivityStore((s) => s.log);
   const resetOrders = useOrderStore((s) => s.resetOrders);
-  const clearCart = useCartStore((s) => s.clearCart);
-  const clearWishlist = useWishlistStore((s) => s.clear);
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [done, setDone] = useState(false);
+  const resetProducts = useCatalogStore((s) => s.resetProducts);
+  const resetCustomers = useCustomerStore((s) => s.reset);
+  const resetDiscounts = useDiscountStore((s) => s.reset);
+  const resetShipping = useShippingStore((s) => s.reset);
+  const restoreStorefront = useStorefrontStore((s) => s.restoreDefaults);
+  const resetInventory = useInventoryStore((s) => s.reset);
+  const resetActivity = useActivityStore((s) => s.reset);
 
-  function resetDemoData() {
-    resetProducts();
-    resetOrders();
-    clearCart();
-    clearWishlist();
-    try {
-      localStorage.removeItem("kendreah-cart");
-      localStorage.removeItem("kendreah-wishlist");
-    } catch {
-      // Ignore storage access errors in restricted contexts.
-    }
-    setConfirmOpen(false);
-    setDone(true);
-  }
+  const exportDemo = () => {
+    const payload = {
+      exportedAt: new Date().toISOString(),
+      settings,
+      note: "Browser-local demo export only.",
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "kendreah-demo-export.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-muted">
-          Prototype settings
-        </p>
-        <h2 className="mt-1 font-serif text-2xl font-semibold text-ink">
-          Settings
-        </h2>
-        <p className="mt-2 max-w-2xl text-sm text-muted">
-          This panel is part of an unauthenticated local demonstration. It is
-          not a secure production admin and must not be used with real customer
-          data.
-        </p>
-      </div>
+    <div>
+      <AdminPageHeader
+        title="Settings"
+        description="Store configuration for the demonstration. Payments remain in Demo Mode."
+      />
 
-      <div className="border border-danger/30 bg-danger/5 px-4 py-3 text-sm text-ink">
-        <p className="flex items-start gap-2 font-medium text-danger">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          Prototype warning
-        </p>
-        <p className="mt-2 text-muted">
-          Ken&apos; Dreah admin demo has no login, roles, or server-side
-          authorization. Anyone with browser access can change LocalStorage
-          catalog and order data. Treat everything here as client-presentation
-          scaffolding only.
-        </p>
-      </div>
-
-      <section className="border border-border bg-soft-white p-6">
-        <h3 className="font-serif text-lg font-semibold">Store information</h3>
-        <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-          <div>
-            <dt className="text-xs uppercase tracking-wider text-muted">
-              Store name
-            </dt>
-            <dd className="mt-1 font-medium">Ken&apos; Dreah Online Store</dd>
+      <div className="space-y-5">
+        <AdminCard title="General">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {(
+              [
+                ["storeName", "Store name"],
+                ["storeEmail", "Store email"],
+                ["businessPhone", "Business phone"],
+                ["launchNote", "Launch information"],
+              ] as const
+            ).map(([key, label]) => (
+              <div key={key}>
+                <Label>{label}</Label>
+                <Input
+                  className="mt-1"
+                  value={settings[key]}
+                  onChange={(e) => update({ [key]: e.target.value })}
+                />
+              </div>
+            ))}
           </div>
-          <div>
-            <dt className="text-xs uppercase tracking-wider text-muted">
-              Currency
-            </dt>
-            <dd className="mt-1 font-medium">USD</dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-xs uppercase tracking-wider text-muted">
-              Shipping destinations
-            </dt>
-            <dd className="mt-2 space-y-2">
-              {Object.entries(DEMO_SHIPPING_RATES).map(([country, rate]) => (
-                <div
-                  key={country}
-                  className="border border-border bg-warm-grey/40 px-3 py-2 text-sm"
-                >
-                  <p className="font-medium">{country}</p>
-                  <p className="text-muted">
-                    {rate.label} — illustrative demo only
-                  </p>
-                </div>
-              ))}
-            </dd>
-          </div>
-          <div className="sm:col-span-2">
-            <dt className="text-xs uppercase tracking-wider text-muted">
-              Persistence
-            </dt>
-            <dd className="mt-1 text-sm text-muted">
-              Catalog and orders sync with the storefront through{" "}
-              <code className="text-ink">kendreah-catalog</code> and{" "}
-              <code className="text-ink">kendreah-orders</code> LocalStorage
-              keys.
-            </dd>
-          </div>
-        </dl>
-      </section>
-
-      <section className="border border-border bg-soft-white p-6">
-        <h3 className="font-serif text-lg font-semibold">Reset demo data</h3>
-        <p className="mt-2 max-w-xl text-sm text-muted">
-          Restores the seed product catalog and seed orders, and clears the
-          demo cart and wishlist. Use this before a client walkthrough if the
-          LocalStorage state has drifted.
-        </p>
-        <Button
-          type="button"
-          variant="pink"
-          className="mt-5"
-          onClick={() => {
-            setDone(false);
-            setConfirmOpen(true);
-          }}
-        >
-          <RotateCcw className="h-4 w-4" />
-          Reset demo data
-        </Button>
-        {done && (
-          <p className="mt-3 text-sm text-success">
-            Demo catalog, orders, cart, and wishlist were reset.
+          <p className="mt-3 text-sm text-admin-muted">
+            Currency: <strong className="text-ink">USD</strong> · Markets: Belize & United States
           </p>
-        )}
-      </section>
+          <Button
+            type="button"
+            variant="pink"
+            className="mt-4"
+            onClick={() => {
+              log({ type: "settings_updated", description: "Updated general settings", entityType: "settings" });
+              toast.success("Settings saved");
+            }}
+          >
+            Save general
+          </Button>
+        </AdminCard>
 
-      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reset all demonstration data?</DialogTitle>
-            <DialogDescription>
-              This restores seed products and seed orders, then clears cart and
-              wishlist LocalStorage. Any products or orders you created in this
-              browser will be lost.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2">
+        <AdminCard title="Payments">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {[
+              ["Stripe", settings.stripeStatus],
+              ["PayPal", settings.paypalStatus],
+            ].map(([name, status]) => (
+              <div key={name} className="border border-border p-4">
+                <div className="flex items-center justify-between">
+                  <p className="font-medium">{name}</p>
+                  <StatusPill tone="warning">
+                    {status === "demo" ? "Demo Mode" : "Not Connected"}
+                  </StatusPill>
+                </div>
+                <p className="mt-2 text-xs text-admin-muted">
+                  No API keys collected. Providers are not operational in this demo.
+                </p>
+              </div>
+            ))}
+          </div>
+        </AdminCard>
+
+        <AdminCard title="Notifications">
+          <div className="space-y-2 text-sm">
+            {(
+              [
+                ["notifyNewOrders", "New orders"],
+                ["notifyLowInventory", "Low inventory"],
+                ["notifyCancellations", "Order cancellations"],
+                ["notifyInquiries", "Customer inquiries"],
+              ] as const
+            ).map(([key, label]) => (
+              <label key={key} className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  className="accent-pink"
+                  checked={settings[key]}
+                  onChange={(e) => update({ [key]: e.target.checked })}
+                />
+                {label} (simulated preference)
+              </label>
+            ))}
+          </div>
+        </AdminCard>
+
+        <AdminCard title="Policies (draft)">
+          <div className="grid gap-3">
+            {(
+              [
+                ["deliveryPolicy", "Delivery policy"],
+                ["returnPolicy", "Return policy"],
+                ["privacyPolicy", "Privacy policy"],
+                ["termsPolicy", "Terms and conditions"],
+              ] as const
+            ).map(([key, label]) => (
+              <div key={key}>
+                <Label>{label}</Label>
+                <textarea
+                  className="mt-1 min-h-24 w-full border border-border px-3 py-2 text-sm"
+                  value={settings[key]}
+                  onChange={(e) => update({ [key]: e.target.value })}
+                />
+              </div>
+            ))}
+          </div>
+        </AdminCard>
+
+        <AdminCard title="Demo management">
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="outline" onClick={exportDemo}>
+              Export demo data
+            </Button>
             <Button
               type="button"
-              variant="ghost"
-              onClick={() => setConfirmOpen(false)}
+              variant="outline"
+              onClick={() => {
+                restoreStorefront();
+                toast.success("Storefront content restored");
+              }}
             >
-              Cancel
+              Restore default storefront
             </Button>
-            <Button type="button" variant="pink" onClick={resetDemoData}>
-              Confirm reset
+            <Button
+              type="button"
+              variant="outline"
+              className="text-danger"
+              onClick={() => {
+                if (
+                  !confirm(
+                    "Reset all demo data in this browser? Orders, products, discounts, and settings will revert to seeds."
+                  )
+                )
+                  return;
+                resetOrders();
+                resetProducts();
+                resetCustomers();
+                resetDiscounts();
+                resetShipping();
+                restoreStorefront();
+                resetSettings();
+                resetInventory();
+                resetActivity();
+                log({ type: "demo_reset", description: "Reset demo data to defaults" });
+                toast.success("Demo data reset");
+              }}
+            >
+              Reset demo data
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+          <p className="mt-3 text-xs text-admin-muted">
+            Persistence is browser LocalStorage only — not a production database.
+          </p>
+        </AdminCard>
+      </div>
     </div>
   );
 }

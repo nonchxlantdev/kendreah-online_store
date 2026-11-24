@@ -1,532 +1,265 @@
 "use client";
 
+import Image from "next/image";
+import Link from "next/link";
 import { useMemo, useState } from "react";
-import { Pencil, Plus, Search, Trash2 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Plus, Search, Trash2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+  AdminCard,
+  AdminPageHeader,
+  Money,
+  StatusPill,
+} from "@/components/admin/admin-ui";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { DEPARTMENT_LABELS, type Department, type ProductStatus } from "@/types";
+import { useActivityStore } from "@/store/activity-store";
 import { useCatalogStore } from "@/store/catalog-store";
-import { formatUSD } from "@/lib/utils";
-import {
-  DEPARTMENT_LABELS,
-  type Department,
-  type Product,
-  type ProductStatus,
-} from "@/types";
-
-const PLACEHOLDER_IMAGE =
-  "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=900&h=1200&q=80";
-
-const DEPARTMENTS: Department[] = ["clothes", "footwear", "appliances"];
-const STATUSES: ProductStatus[] = ["active", "draft", "sold_out"];
-
-type ProductFormState = {
-  name: string;
-  slug: string;
-  department: Department;
-  price: string;
-  compareAt: string;
-  stock: string;
-  status: ProductStatus;
-  shortDescription: string;
-  imageUrl: string;
-  isFeatured: boolean;
-  isNew: boolean;
-};
-
-const emptyForm = (): ProductFormState => ({
-  name: "",
-  slug: "",
-  department: "clothes",
-  price: "",
-  compareAt: "",
-  stock: "10",
-  status: "active",
-  shortDescription: "",
-  imageUrl: PLACEHOLDER_IMAGE,
-  isFeatured: false,
-  isNew: false,
-});
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
-
-function productToForm(product: Product): ProductFormState {
-  return {
-    name: product.name,
-    slug: product.slug,
-    department: product.department,
-    price: String(product.price),
-    compareAt:
-      product.compareAtPrice != null ? String(product.compareAtPrice) : "",
-    stock: String(product.stock),
-    status: product.status,
-    shortDescription: product.shortDescription,
-    imageUrl: product.images[0] ?? PLACEHOLDER_IMAGE,
-    isFeatured: product.isFeatured,
-    isNew: product.isNew,
-  };
-}
-
-function selectClassName() {
-  return "flex h-11 w-full border border-border bg-white px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold";
-}
+import { createId } from "@/lib/utils";
 
 export default function AdminProductsPage() {
   const products = useCatalogStore((s) => s.products);
-  const addProduct = useCatalogStore((s) => s.addProduct);
-  const updateProduct = useCatalogStore((s) => s.updateProduct);
   const deleteProduct = useCatalogStore((s) => s.deleteProduct);
+  const addProduct = useCatalogStore((s) => s.addProduct);
   const setStatus = useCatalogStore((s) => s.setStatus);
+  const log = useActivityStore((s) => s.log);
 
-  const [query, setQuery] = useState("");
-  const [formOpen, setFormOpen] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<ProductFormState>(emptyForm);
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-  const [slugTouched, setSlugTouched] = useState(false);
+  const [q, setQ] = useState("");
+  const [dept, setDept] = useState<Department | "all">("all");
+  const [status, setStatusFilter] = useState<ProductStatus | "all">("all");
+  const [stock, setStock] = useState<"all" | "in" | "low" | "out">("all");
+  const [selected, setSelected] = useState<string[]>([]);
+  const [page, setPage] = useState(0);
+  const pageSize = 10;
 
   const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return products;
-    return products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.slug.toLowerCase().includes(q) ||
-        DEPARTMENT_LABELS[p.department].toLowerCase().includes(q) ||
-        p.status.includes(q)
-    );
-  }, [products, query]);
+    return products
+      .filter((p) => {
+        if (q && !p.name.toLowerCase().includes(q.toLowerCase()) && !p.sku?.toLowerCase().includes(q.toLowerCase()))
+          return false;
+        if (dept !== "all" && p.department !== dept) return false;
+        if (status !== "all" && p.status !== status) return false;
+        if (stock === "out" && p.stock > 0) return false;
+        if (stock === "low" && (p.stock <= 0 || p.stock > (p.lowStockThreshold ?? 5)))
+          return false;
+        if (stock === "in" && p.stock <= (p.lowStockThreshold ?? 5)) return false;
+        return true;
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [products, q, dept, status, stock]);
 
-  const deleteTarget = products.find((p) => p.id === deleteId);
+  const pageItems = filtered.slice(page * pageSize, page * pageSize + pageSize);
+  const pages = Math.max(1, Math.ceil(filtered.length / pageSize));
 
-  function openCreate() {
-    setEditingId(null);
-    setForm(emptyForm());
-    setSlugTouched(false);
-    setFormOpen(true);
-  }
-
-  function openEdit(product: Product) {
-    setEditingId(product.id);
-    setForm(productToForm(product));
-    setSlugTouched(true);
-    setFormOpen(true);
-  }
-
-  function updateField<K extends keyof ProductFormState>(
-    key: K,
-    value: ProductFormState[K]
-  ) {
-    setForm((prev) => {
-      const next = { ...prev, [key]: value };
-      if (key === "name" && !slugTouched && !editingId) {
-        next.slug = slugify(String(value));
-      }
-      return next;
-    });
-  }
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    const price = Number(form.price);
-    const stock = Math.max(0, Math.floor(Number(form.stock) || 0));
-    const compareAt = form.compareAt.trim()
-      ? Number(form.compareAt)
-      : undefined;
-    if (!form.name.trim() || !form.slug.trim() || Number.isNaN(price)) return;
-
-    const image = form.imageUrl.trim() || PLACEHOLDER_IMAGE;
-    const payload = {
-      name: form.name.trim(),
-      slug: slugify(form.slug) || slugify(form.name),
-      department: form.department,
-      price,
-      compareAtPrice:
-        compareAt != null && !Number.isNaN(compareAt) ? compareAt : undefined,
-      stock,
-      status: form.status,
-      shortDescription: form.shortDescription.trim() || form.name.trim(),
-      description:
-        form.shortDescription.trim() ||
-        `${form.name.trim()} — demonstration product for Ken' Dreah.`,
-      images: [image],
-      isFeatured: form.isFeatured,
-      isNew: form.isNew,
-      specs: {},
-    };
-
-    if (editingId) {
-      const existing = products.find((p) => p.id === editingId);
-      updateProduct(editingId, {
-        ...payload,
-        images: existing?.images?.length
-          ? [image, ...existing.images.slice(1)]
-          : [image],
-        specs: existing?.specs ?? {},
-        sizes: existing?.sizes,
-        colors: existing?.colors,
-      });
-    } else {
-      addProduct(payload);
-    }
-
-    setFormOpen(false);
-    setEditingId(null);
-    setForm(emptyForm());
-  }
-
-  function confirmDelete() {
-    if (!deleteId) return;
-    deleteProduct(deleteId);
-    setDeleteId(null);
-  }
+  const toggleAll = () => {
+    if (selected.length === pageItems.length) setSelected([]);
+    else setSelected(pageItems.map((p) => p.id));
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-muted">
-            Demonstration catalog
-          </p>
-          <h2 className="mt-1 font-serif text-2xl font-semibold text-ink">
-            Products
-          </h2>
-          <p className="mt-2 text-sm text-muted">
-            Edits sync live with the storefront via shared LocalStorage.
-          </p>
+    <div>
+      <AdminPageHeader
+        title="Products"
+        description="Manage catalogue items shown on the public storefront."
+        actions={
+          <Button asChild variant="pink" size="sm">
+            <Link href="/admin/products/new">
+              <Plus className="h-4 w-4" />
+              Add product
+            </Link>
+          </Button>
+        }
+      />
+
+      <AdminCard>
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[12rem] flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-admin-muted" />
+            <Input
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setPage(0);
+              }}
+              placeholder="Search products…"
+              className="h-9 pl-9"
+            />
+          </div>
+          <select
+            value={dept}
+            onChange={(e) => setDept(e.target.value as Department | "all")}
+            className="h-9 border border-border bg-white px-2 text-xs"
+          >
+            <option value="all">All categories</option>
+            <option value="clothes">Clothing</option>
+            <option value="footwear">Footwear</option>
+            <option value="appliances">Home & Living</option>
+          </select>
+          <select
+            value={status}
+            onChange={(e) => setStatusFilter(e.target.value as ProductStatus | "all")}
+            className="h-9 border border-border bg-white px-2 text-xs"
+          >
+            <option value="all">All statuses</option>
+            <option value="active">Active</option>
+            <option value="draft">Draft</option>
+            <option value="sold_out">Sold out</option>
+          </select>
+          <select
+            value={stock}
+            onChange={(e) => setStock(e.target.value as typeof stock)}
+            className="h-9 border border-border bg-white px-2 text-xs"
+          >
+            <option value="all">All stock</option>
+            <option value="in">In stock</option>
+            <option value="low">Low stock</option>
+            <option value="out">Out of stock</option>
+          </select>
         </div>
-        <Button type="button" variant="pink" onClick={openCreate}>
-          <Plus className="h-4 w-4" />
-          Add product
-        </Button>
-      </div>
 
-      <div className="relative max-w-md">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-        <Input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search name, slug, department…"
-          className="pl-10"
-        />
-      </div>
+        {selected.length > 0 && (
+          <div className="mb-3 flex flex-wrap gap-2 border border-border bg-admin-bg px-3 py-2 text-sm">
+            <span className="text-admin-muted">{selected.length} selected</span>
+            <button
+              type="button"
+              className="font-semibold text-pink"
+              onClick={() => {
+                selected.forEach((id) => setStatus(id, "draft"));
+                log({ type: "product_archived", description: `Archived ${selected.length} products` });
+                toast.success("Selected products archived (draft)");
+                setSelected([]);
+              }}
+            >
+              Archive
+            </button>
+            <button
+              type="button"
+              className="font-semibold text-danger"
+              onClick={() => {
+                if (!confirm("Delete selected products? This cannot be undone in this browser."))
+                  return;
+                selected.forEach((id) => deleteProduct(id));
+                toast.success("Products deleted");
+                setSelected([]);
+              }}
+            >
+              Delete
+            </button>
+          </div>
+        )}
 
-      <div className="overflow-x-auto border border-border bg-soft-white">
-        <table className="w-full min-w-[900px] text-left text-sm">
-          <thead className="bg-warm-grey/70 text-[11px] uppercase tracking-wider text-muted">
-            <tr>
-              <th className="px-4 py-3 font-medium">Product</th>
-              <th className="px-4 py-3 font-medium">Department</th>
-              <th className="px-4 py-3 font-medium">Price</th>
-              <th className="px-4 py-3 font-medium">Stock</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Flags</th>
-              <th className="px-4 py-3 font-medium text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
-              <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-muted">
-                  No products match your search.
-                </td>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[800px] text-left text-sm">
+            <thead className="text-[10px] uppercase tracking-wider text-admin-muted">
+              <tr className="border-b border-border">
+                <th className="py-2 pr-2">
+                  <input type="checkbox" checked={selected.length === pageItems.length && pageItems.length > 0} onChange={toggleAll} aria-label="Select page" />
+                </th>
+                <th className="py-2">Product</th>
+                <th className="py-2">SKU</th>
+                <th className="py-2">Category</th>
+                <th className="py-2">Price</th>
+                <th className="py-2">Inventory</th>
+                <th className="py-2">Status</th>
+                <th className="py-2">Actions</th>
               </tr>
-            ) : (
-              filtered.map((product) => (
-                <tr key={product.id} className="border-t border-border">
-                  <td className="px-4 py-3">
+            </thead>
+            <tbody>
+              {pageItems.map((p) => (
+                <tr key={p.id} className="border-b border-border/70">
+                  <td className="py-2.5 pr-2">
+                    <input
+                      type="checkbox"
+                      checked={selected.includes(p.id)}
+                      onChange={() =>
+                        setSelected((s) =>
+                          s.includes(p.id) ? s.filter((x) => x !== p.id) : [...s, p.id]
+                        )
+                      }
+                      aria-label={`Select ${p.name}`}
+                    />
+                  </td>
+                  <td className="py-2.5">
                     <div className="flex items-center gap-3">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={product.images[0]}
-                        alt=""
-                        className="h-12 w-10 object-cover"
-                      />
-                      <div className="min-w-0">
-                        <p className="font-medium text-ink">{product.name}</p>
-                        <p className="truncate text-xs text-muted">
-                          {product.slug}
-                        </p>
+                      <div className="relative h-12 w-10 shrink-0 bg-neutral">
+                        <Image src={p.images[0]} alt="" fill className="object-cover" sizes="40px" />
                       </div>
+                      <Link href={`/admin/products/edit?id=${p.id}`} className="font-medium hover:text-pink">
+                        {p.name}
+                      </Link>
                     </div>
                   </td>
-                  <td className="px-4 py-3">
-                    {DEPARTMENT_LABELS[product.department]}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div>{formatUSD(product.price)}</div>
-                    {product.compareAtPrice != null && (
-                      <div className="text-xs text-muted line-through">
-                        {formatUSD(product.compareAtPrice)}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span
-                      className={
-                        product.stock <= 5 ? "font-semibold text-danger" : ""
-                      }
-                    >
-                      {product.stock}
-                    </span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <Badge
+                  <td className="py-2.5 text-admin-muted">{p.sku ?? "—"}</td>
+                  <td className="py-2.5">{DEPARTMENT_LABELS[p.department]}</td>
+                  <td className="py-2.5"><Money amount={p.price} /></td>
+                  <td className="py-2.5 tabular-nums">{p.stock}</td>
+                  <td className="py-2.5">
+                    <StatusPill
                       tone={
-                        product.status === "active"
-                          ? "pink"
-                          : product.status === "sold_out"
-                            ? "sale"
-                            : "ink"
+                        p.status === "active"
+                          ? "success"
+                          : p.status === "draft"
+                            ? "ink"
+                            : "danger"
                       }
                     >
-                      {product.status.replace("_", " ")}
-                    </Badge>
+                      {p.status}
+                    </StatusPill>
                   </td>
-                  <td className="px-4 py-3 text-xs text-muted">
-                    {[
-                      product.isFeatured ? "Featured" : null,
-                      product.isNew ? "New" : null,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ") || "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex flex-wrap justify-end gap-2">
-                      <Button
+                  <td className="py-2.5">
+                    <div className="flex flex-wrap gap-2 text-xs font-semibold">
+                      <Link href={`/admin/products/edit?id=${p.id}`} className="text-pink">Edit</Link>
+                      <button
                         type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openEdit(product)}
+                        className="text-ink"
+                        onClick={() => {
+                          const copy = addProduct({
+                            ...p,
+                            id: createId("p"),
+                            name: `${p.name} (Copy)`,
+                            slug: `${p.slug}-copy-${Date.now().toString(36)}`,
+                            status: "draft",
+                          });
+                          log({ type: "product_created", description: `Duplicated ${p.name}`, entityId: copy.id, entityType: "product" });
+                          toast.success("Product duplicated as draft");
+                        }}
                       >
-                        <Pencil className="h-3.5 w-3.5" />
-                        Edit
-                      </Button>
-                      {product.status !== "sold_out" && (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setStatus(product.id, "sold_out")}
-                        >
-                          Sold out
-                        </Button>
-                      )}
-                      <Button
+                        Duplicate
+                      </button>
+                      <button
                         type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="text-danger hover:bg-danger/10"
-                        onClick={() => setDeleteId(product.id)}
+                        className="text-danger"
+                        onClick={() => {
+                          if (!confirm(`Delete ${p.name}?`)) return;
+                          deleteProduct(p.id);
+                          toast.success("Deleted");
+                        }}
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                        <Trash2 className="inline h-3.5 w-3.5" />
+                      </button>
                     </div>
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
 
-      <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {editingId ? "Edit product" : "Add product"}
-            </DialogTitle>
-            <DialogDescription>
-              Demonstration catalog entry — changes appear on the storefront.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleSubmit} className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={form.name}
-                onChange={(e) => updateField("name", e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="slug">Slug</Label>
-              <Input
-                id="slug"
-                value={form.slug}
-                onChange={(e) => {
-                  setSlugTouched(true);
-                  updateField("slug", e.target.value);
-                }}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="department">Department</Label>
-              <select
-                id="department"
-                className={selectClassName()}
-                value={form.department}
-                onChange={(e) =>
-                  updateField("department", e.target.value as Department)
-                }
-              >
-                {DEPARTMENTS.map((d) => (
-                  <option key={d} value={d}>
-                    {DEPARTMENT_LABELS[d]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="price">Price (USD)</Label>
-              <Input
-                id="price"
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.price}
-                onChange={(e) => updateField("price", e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="compareAt">Compare at</Label>
-              <Input
-                id="compareAt"
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.compareAt}
-                onChange={(e) => updateField("compareAt", e.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="stock">Stock</Label>
-              <Input
-                id="stock"
-                type="number"
-                min="0"
-                step="1"
-                value={form.stock}
-                onChange={(e) => updateField("stock", e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="status">Status</Label>
-              <select
-                id="status"
-                className={selectClassName()}
-                value={form.status}
-                onChange={(e) =>
-                  updateField("status", e.target.value as ProductStatus)
-                }
-              >
-                {STATUSES.map((s) => (
-                  <option key={s} value={s}>
-                    {s.replace("_", " ")}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="shortDescription">Short description</Label>
-              <textarea
-                id="shortDescription"
-                value={form.shortDescription}
-                onChange={(e) =>
-                  updateField("shortDescription", e.target.value)
-                }
-                rows={3}
-                className="flex w-full border border-border bg-white px-3 py-2 text-sm text-ink placeholder:text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold"
-              />
-            </div>
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="imageUrl">Image URL</Label>
-              <Input
-                id="imageUrl"
-                value={form.imageUrl}
-                onChange={(e) => updateField("imageUrl", e.target.value)}
-                placeholder={PLACEHOLDER_IMAGE}
-              />
-              <p className="text-xs text-muted">
-                Leave as the Unsplash placeholder or paste a first-image URL.
-              </p>
-            </div>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.isFeatured}
-                onChange={(e) => updateField("isFeatured", e.target.checked)}
-                className="h-4 w-4 accent-pink"
-              />
-              Featured
-            </label>
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={form.isNew}
-                onChange={(e) => updateField("isNew", e.target.checked)}
-                className="h-4 w-4 accent-pink"
-              />
-              New
-            </label>
-            <div className="flex justify-end gap-2 sm:col-span-2">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setFormOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" variant="pink">
-                {editingId ? "Save changes" : "Create product"}
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog
-        open={!!deleteId}
-        onOpenChange={(open) => !open && setDeleteId(null)}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete product?</DialogTitle>
-            <DialogDescription>
-              This removes{" "}
-              <strong>{deleteTarget?.name ?? "this product"}</strong> from the
-              demonstration catalog. The storefront will update immediately.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex justify-end gap-2">
-            <Button type="button" variant="ghost" onClick={() => setDeleteId(null)}>
-              Cancel
+        <div className="mt-4 flex items-center justify-between text-sm">
+          <p className="text-admin-muted">
+            {filtered.length} products · page {page + 1} / {pages}
+          </p>
+          <div className="flex gap-2">
+            <Button type="button" variant="outline" size="sm" disabled={page === 0} onClick={() => setPage((p) => p - 1)}>
+              Previous
             </Button>
-            <Button type="button" variant="pink" onClick={confirmDelete}>
-              Delete
+            <Button type="button" variant="outline" size="sm" disabled={page >= pages - 1} onClick={() => setPage((p) => p + 1)}>
+              Next
             </Button>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </AdminCard>
     </div>
   );
 }

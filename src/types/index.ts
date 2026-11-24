@@ -1,6 +1,6 @@
 export type Department = "clothes" | "footwear" | "appliances";
 
-export type ProductStatus = "active" | "draft" | "sold_out";
+export type ProductStatus = "active" | "draft" | "sold_out" | "archived";
 
 export type ProductBadge = "new" | "sale" | null;
 
@@ -28,10 +28,14 @@ export interface Product {
   description: string;
   price: number;
   compareAtPrice?: number;
+  cost?: number;
+  sku?: string;
   images: string[];
   stock: number;
+  lowStockThreshold?: number;
   sizes?: string[];
   colors?: { name: string; hex: string }[];
+  tags?: string[];
   isNew: boolean;
   isFeatured: boolean;
   status: ProductStatus;
@@ -48,9 +52,16 @@ export interface CartItem {
   colorHex?: string;
 }
 
-export type OrderStatus = "pending" | "processing" | "shipped" | "delivered";
+export type OrderStatus =
+  | "pending"
+  | "processing"
+  | "shipped"
+  | "delivered"
+  | "cancelled";
 
 export type PaymentMethod = "card" | "paypal";
+
+export type PaymentStatus = "paid" | "pending" | "refunded" | "failed";
 
 export type ShippingCountry = "Belize" | "United States";
 
@@ -75,6 +86,13 @@ export interface OrderItem {
   image: string;
 }
 
+export interface OrderNote {
+  id: string;
+  text: string;
+  createdAt: string;
+  adminName: string;
+}
+
 export interface Order {
   id: string;
   orderNumber: string;
@@ -83,9 +101,16 @@ export interface Order {
   items: OrderItem[];
   subtotal: number;
   shipping: number;
+  discountAmount?: number;
+  discountCode?: string;
   total: number;
   paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
   shippingAddress: ShippingAddress;
+  trackingNumber?: string;
+  notes: OrderNote[];
+  cancelledAt?: string;
+  refundedAt?: string;
   isDemo: true;
 }
 
@@ -93,9 +118,14 @@ export interface DemoCustomer {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   country: ShippingCountry;
+  city?: string;
   orders: number;
   totalSpent: number;
+  lastOrderAt?: string;
+  createdAt?: string;
+  notes?: OrderNote[];
 }
 
 export const DEPARTMENT_LABELS: Record<Department, string> = {

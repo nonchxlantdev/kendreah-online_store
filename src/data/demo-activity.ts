@@ -1,0 +1,30 @@
+import { daysAgo } from "@/lib/date";
+import type { ActivityEntry } from "@/types/admin";
+
+export const SEED_ACTIVITY: ActivityEntry[] = [
+  { id: "act_1", type: "order_status_changed", description: "Marked order KD-2026… as shipped", entityType: "order", entityId: "ord_seed_1", adminName: "Demo Admin", createdAt: daysAgo(1, 15) },
+  { id: "act_2", type: "inventory_adjusted", description: "Adjusted stock for Classic White Sneakers (+8)", entityType: "product", entityId: "p-white-sneakers", adminName: "Demo Admin", createdAt: daysAgo(1, 11) },
+  { id: "act_3", type: "storefront_published", description: "Published homepage campaign updates", entityType: "storefront", adminName: "Demo Admin", createdAt: daysAgo(2, 16) },
+  { id: "act_4", type: "discount_created", description: "Created discount HOME20", entityType: "discount", entityId: "disc_flat20", adminName: "Demo Admin", createdAt: daysAgo(3, 10) },
+  { id: "act_5", type: "product_updated", description: "Updated pricing for Floral Midi Dress", entityType: "product", entityId: "p-floral-midi", adminName: "Demo Admin", createdAt: daysAgo(4, 14) },
+  { id: "act_6", type: "order_status_changed", description: "Marked order as processing", entityType: "order", entityId: "ord_seed_5", adminName: "Demo Admin", createdAt: daysAgo(5, 9) },
+  { id: "act_7", type: "settings_updated", description: "Updated notification preferences", entityType: "settings", adminName: "Demo Admin", createdAt: daysAgo(6, 13) },
+  { id: "act_8", type: "category_updated", description: "Updated Clothing category description", entityType: "category", entityId: "clothes", adminName: "Demo Admin", createdAt: daysAgo(7, 12) },
+  { id: "act_9", type: "shipping_updated", description: "Updated United States shipping demo rate", entityType: "shipping", adminName: "Demo Admin", createdAt: daysAgo(8, 11) },
+  { id: "act_10", type: "product_created", description: "Added demonstration product draft", entityType: "product", adminName: "Demo Admin", createdAt: daysAgo(9, 15) },
+  { id: "act_11", type: "inventory_adjusted", description: "Low-stock restock for Digital Air Fryer", entityType: "product", entityId: "p-air-fryer", adminName: "Demo Admin", createdAt: daysAgo(10, 10) },
+  { id: "act_12", type: "discount_updated", description: "Deactivated SPRING25 (expired)", entityType: "discount", entityId: "disc_expired", adminName: "Demo Admin", createdAt: daysAgo(12, 9) },
+  { id: "act_13", type: "order_status_changed", description: "Cancelled eligible demo order and noted refund", entityType: "order", entityId: "ord_seed_12", adminName: "Demo Admin", createdAt: daysAgo(14, 17) },
+  { id: "act_14", type: "product_archived", description: "Archived seasonal draft product", entityType: "product", adminName: "Demo Admin", createdAt: daysAgo(16, 11) },
+  { id: "act_15", type: "storefront_published", description: "Updated announcement bar copy", entityType: "storefront", adminName: "Demo Admin", createdAt: daysAgo(18, 14) },
+  { id: "act_16", type: "note_added", description: "Added internal note on customer Maya Thompson", entityType: "customer", entityId: "cust_1", adminName: "Demo Admin", createdAt: daysAgo(20, 10) },
+  { id: "act_17", type: "inventory_adjusted", description: "Corrected inventory for Women's Everyday Sandals", entityType: "product", entityId: "p-everyday-sandals", adminName: "Demo Admin", createdAt: daysAgo(22, 12) },
+  { id: "act_18", type: "product_updated", description: "Set featured flag on New Arrivals picks", entityType: "product", adminName: "Demo Admin", createdAt: daysAgo(25, 15) },
+  { id: "act_19", type: "settings_updated", description: "Reviewed demo payment provider cards", entityType: "settings", adminName: "Demo Admin", createdAt: daysAgo(28, 9) },
+  { id: "act_20", type: "order_status_changed", description: "Marked order as delivered", entityType: "order", entityId: "ord_seed_20", adminName: "Demo Admin", createdAt: daysAgo(30, 16) },
+  { id: "act_21", type: "discount_created", description: "Created WELCOME10", entityType: "discount", entityId: "disc_welcome10", adminName: "Demo Admin", createdAt: daysAgo(40, 11) },
+  { id: "act_22", type: "shipping_updated", description: "Configured Belize demo shipping method", entityType: "shipping", adminName: "Demo Admin", createdAt: daysAgo(45, 10) },
+  { id: "act_23", type: "product_updated", description: "Updated media gallery for Elegant Blouse", entityType: "product", entityId: "p-elegant-blouse", adminName: "Demo Admin", createdAt: daysAgo(50, 13) },
+  { id: "act_24", type: "category_updated", description: "Reordered Home & Living category visibility", entityType: "category", entityId: "appliances", adminName: "Demo Admin", createdAt: daysAgo(55, 12) },
+  { id: "act_25", type: "storefront_published", description: "Initial storefront content published (demo)", entityType: "storefront", adminName: "Demo Admin", createdAt: daysAgo(60, 10) },
+];

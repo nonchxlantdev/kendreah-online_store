@@ -1,194 +1,200 @@
 "use client";
 
+import Image from "next/image";
 import { useMemo, useState } from "react";
-import { AlertTriangle, Search } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import {
+  AdminCard,
+  AdminPageHeader,
+  StatusPill,
+} from "@/components/admin/admin-ui";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useActivityStore } from "@/store/activity-store";
 import { useCatalogStore } from "@/store/catalog-store";
-import { DEPARTMENT_LABELS } from "@/types";
+import { stockStatus, useInventoryStore } from "@/store/inventory-store";
+import { formatUSD } from "@/lib/utils";
 
 export default function AdminInventoryPage() {
   const products = useCatalogStore((s) => s.products);
   const updateStock = useCatalogStore((s) => s.updateStock);
-  const [query, setQuery] = useState("");
+  const getThreshold = useInventoryStore((s) => s.getThreshold);
+  const setThreshold = useInventoryStore((s) => s.setThreshold);
+  const logAdjustment = useInventoryStore((s) => s.logAdjustment);
+  const adjustments = useInventoryStore((s) => s.adjustments);
+  const log = useActivityStore((s) => s.log);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
-  const [lowOnly, setLowOnly] = useState(false);
+  const [reasons, setReasons] = useState<Record<string, string>>({});
 
-  const rows = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return [...products]
-      .filter((p) => {
-        if (lowOnly && p.stock > 5) return false;
-        if (!q) return true;
-        return (
-          p.name.toLowerCase().includes(q) ||
-          DEPARTMENT_LABELS[p.department].toLowerCase().includes(q)
-        );
-      })
-      .sort((a, b) => a.stock - b.stock);
-  }, [products, query, lowOnly]);
+  const rows = useMemo(
+    () =>
+      products
+        .filter((p) => p.status !== "draft")
+        .map((p) => {
+          const threshold = getThreshold(p.id);
+          return { product: p, threshold, status: stockStatus(p.stock, threshold) };
+        }),
+    [products, getThreshold]
+  );
 
-  function setDraft(id: string, value: string) {
-    setDrafts((prev) => ({ ...prev, [id]: value }));
-  }
+  const totals = {
+    units: rows.reduce((s, r) => s + r.product.stock, 0),
+    inStock: rows.filter((r) => r.status === "in_stock").length,
+    low: rows.filter((r) => r.status === "low").length,
+    out: rows.filter((r) => r.status === "out").length,
+    value: rows.reduce(
+      (s, r) => s + r.product.stock * (r.product.cost ?? r.product.price * 0.45),
+      0
+    ),
+  };
 
-  function applyStock(id: string) {
-    const raw = drafts[id];
-    if (raw == null || raw === "") return;
-    const next = Math.max(0, Math.floor(Number(raw)));
-    if (Number.isNaN(next)) return;
-    updateStock(id, next);
-    setDrafts((prev) => {
-      const copy = { ...prev };
-      delete copy[id];
-      return copy;
+  const apply = (productId: string, mode: "set" | "inc" | "dec") => {
+    const product = products.find((p) => p.id === productId);
+    if (!product) return;
+    const raw = Number(drafts[productId] ?? "");
+    if (Number.isNaN(raw)) {
+      toast.error("Enter a valid quantity");
+      return;
+    }
+    let next = product.stock;
+    if (mode === "set") next = Math.max(0, Math.floor(raw));
+    if (mode === "inc") next = product.stock + Math.max(0, Math.floor(raw));
+    if (mode === "dec") next = Math.max(0, product.stock - Math.max(0, Math.floor(raw)));
+    const reason = reasons[productId]?.trim() || "Manual adjustment";
+    updateStock(productId, next);
+    logAdjustment({
+      productId,
+      previousStock: product.stock,
+      nextStock: next,
+      delta: next - product.stock,
+      reason,
     });
-  }
-
-  const lowCount = products.filter((p) => p.stock <= 5).length;
+    log({
+      type: "inventory_adjusted",
+      description: `Inventory ${product.name}: ${product.stock} → ${next}`,
+      entityType: "product",
+      entityId: productId,
+    });
+    toast.success("Stock updated");
+    setDrafts((d) => ({ ...d, [productId]: "" }));
+  };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <p className="text-xs uppercase tracking-[0.2em] text-muted">
-          Demonstration inventory
-        </p>
-        <h2 className="mt-1 font-serif text-2xl font-semibold text-ink">
-          Inventory
-        </h2>
-        <p className="mt-2 text-sm text-muted">
-          Quick stock updates write to the shared catalog store. Low stock is
-          highlighted at ≤ 5 units.
-        </p>
+    <div>
+      <AdminPageHeader
+        title="Inventory"
+        description="Stock levels sync with storefront availability. Negative stock is prevented."
+      />
+      <div className="mb-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        {[
+          ["Total units", String(totals.units)],
+          ["In stock", String(totals.inStock)],
+          ["Low stock", String(totals.low)],
+          ["Out of stock", String(totals.out)],
+          ["Est. inventory value", formatUSD(totals.value)],
+        ].map(([label, value]) => (
+          <AdminCard key={label} className="!p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-admin-muted">
+              {label}
+            </p>
+            <p className="mt-2 font-display text-xl font-semibold tabular-nums">{value}</p>
+          </AdminCard>
+        ))}
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative max-w-md flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search inventory…"
-            className="pl-10"
-          />
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={lowOnly}
-              onChange={(e) => setLowOnly(e.target.checked)}
-              className="h-4 w-4 accent-pink"
-            />
-            Low stock only ({lowCount})
-          </label>
-        </div>
-      </div>
-
-      <div className="overflow-x-auto border border-border bg-soft-white">
-        <table className="w-full min-w-[760px] text-left text-sm">
-          <thead className="bg-warm-grey/70 text-[11px] uppercase tracking-wider text-muted">
-            <tr>
-              <th className="px-4 py-3 font-medium">Product</th>
-              <th className="px-4 py-3 font-medium">Department</th>
-              <th className="px-4 py-3 font-medium">Status</th>
-              <th className="px-4 py-3 font-medium">Current stock</th>
-              <th className="px-4 py-3 font-medium">Quick update</th>
+      <AdminCard className="overflow-x-auto">
+        <table className="w-full min-w-[900px] text-left text-sm">
+          <thead className="text-[10px] uppercase tracking-wider text-admin-muted">
+            <tr className="border-b border-border">
+              <th className="py-2">Product</th>
+              <th className="py-2">SKU</th>
+              <th className="py-2">Available</th>
+              <th className="py-2">Threshold</th>
+              <th className="py-2">Status</th>
+              <th className="py-2">Adjust</th>
             </tr>
           </thead>
           <tbody>
-            {rows.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-muted">
-                  No inventory rows match.
+            {rows.map(({ product, threshold, status }) => (
+              <tr key={product.id} className="border-b border-border/70 align-top">
+                <td className="py-3">
+                  <div className="flex items-center gap-3">
+                    <div className="relative h-12 w-10 bg-neutral">
+                      <Image src={product.images[0]} alt="" fill className="object-cover" sizes="40px" />
+                    </div>
+                    <span className="font-medium">{product.name}</span>
+                  </div>
+                </td>
+                <td className="py-3 text-admin-muted">{product.sku ?? "—"}</td>
+                <td className="py-3 tabular-nums">{product.stock}</td>
+                <td className="py-3">
+                  <Input
+                    type="number"
+                    min={0}
+                    className="h-9 w-20"
+                    value={threshold}
+                    onChange={(e) => setThreshold(product.id, Number(e.target.value))}
+                  />
+                </td>
+                <td className="py-3">
+                  <StatusPill tone={status === "out" ? "danger" : status === "low" ? "warning" : "success"}>
+                    {status === "out" ? "Out" : status === "low" ? "Low" : "In stock"}
+                  </StatusPill>
+                </td>
+                <td className="py-3">
+                  <div className="flex flex-col gap-1.5">
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="Qty"
+                      className="h-9 w-24"
+                      value={drafts[product.id] ?? ""}
+                      onChange={(e) =>
+                        setDrafts((d) => ({ ...d, [product.id]: e.target.value }))
+                      }
+                    />
+                    <Input
+                      placeholder="Reason"
+                      className="h-9 w-40"
+                      value={reasons[product.id] ?? ""}
+                      onChange={(e) =>
+                        setReasons((d) => ({ ...d, [product.id]: e.target.value }))
+                      }
+                    />
+                    <div className="flex gap-1">
+                      <Button type="button" size="sm" variant="outline" onClick={() => apply(product.id, "inc")}>+</Button>
+                      <Button type="button" size="sm" variant="outline" onClick={() => apply(product.id, "dec")}>−</Button>
+                      <Button type="button" size="sm" variant="default" onClick={() => apply(product.id, "set")}>Set</Button>
+                    </div>
+                  </div>
                 </td>
               </tr>
-            ) : (
-              rows.map((product) => {
-                const isLow = product.stock <= 5;
-                return (
-                  <tr
-                    key={product.id}
-                    className={`border-t border-border ${
-                      isLow ? "bg-pink-blush/60" : ""
-                    }`}
-                  >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={product.images[0]}
-                          alt=""
-                          className="h-12 w-10 object-cover"
-                        />
-                        <div>
-                          <p className="font-medium">{product.name}</p>
-                          {isLow && (
-                            <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-danger">
-                              <AlertTriangle className="h-3 w-3" />
-                              Low stock
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {DEPARTMENT_LABELS[product.department]}
-                    </td>
-                    <td className="px-4 py-3">
-                      <Badge
-                        tone={
-                          product.status === "sold_out"
-                            ? "sale"
-                            : product.status === "active"
-                              ? "pink"
-                              : "ink"
-                        }
-                      >
-                        {product.status.replace("_", " ")}
-                      </Badge>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span
-                        className={
-                          isLow ? "text-lg font-semibold text-danger" : "font-medium"
-                        }
-                      >
-                        {product.stock}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex max-w-xs items-center gap-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={drafts[product.id] ?? String(product.stock)}
-                          onChange={(e) => setDraft(product.id, e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") applyStock(product.id);
-                          }}
-                          className="h-9"
-                          aria-label={`Stock for ${product.name}`}
-                        />
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => applyStock(product.id)}
-                        >
-                          Save
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
+            ))}
           </tbody>
         </table>
-      </div>
+      </AdminCard>
+
+      <AdminCard title="Adjustment history" className="mt-5">
+        {adjustments.length === 0 ? (
+          <p className="text-sm text-admin-muted">No adjustments yet in this browser.</p>
+        ) : (
+          <ul className="divide-y divide-border text-sm">
+            {adjustments.slice(0, 20).map((a) => (
+              <li key={a.id} className="flex justify-between gap-3 py-2">
+                <span>
+                  {a.reason} ({a.previousStock} → {a.nextStock})
+                </span>
+                <span className="text-xs text-admin-muted">
+                  {new Date(a.createdAt).toLocaleString()}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </AdminCard>
+      <p className="mt-3 text-xs text-admin-muted">
+        Estimated value uses product cost when available, otherwise 45% of selling price (demo heuristic).
+      </p>
     </div>
   );
 }

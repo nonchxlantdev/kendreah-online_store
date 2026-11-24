@@ -9,11 +9,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useIsClient } from "@/hooks/use-is-client";
-import { getDemoShipping } from "@/lib/shipping";
 import { formatUSD } from "@/lib/utils";
+import { useActivityStore } from "@/store/activity-store";
 import { useCartStore } from "@/store/cart-store";
 import { useCatalogStore } from "@/store/catalog-store";
+import { useCustomerStore } from "@/store/customer-store";
+import { useDiscountStore } from "@/store/discount-store";
+import { useInventoryStore } from "@/store/inventory-store";
 import { useOrderStore } from "@/store/order-store";
+import { useShippingStore } from "@/store/shipping-store";
 import type { PaymentMethod, ShippingCountry } from "@/types";
 
 interface CheckoutForm {
@@ -44,11 +48,21 @@ export default function CheckoutPage() {
   const [form, setForm] = useState<CheckoutForm>(INITIAL_FORM);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
   const [submitting, setSubmitting] = useState(false);
+  const [couponInput, setCouponInput] = useState("");
+  const [appliedCode, setAppliedCode] = useState<string | null>(null);
+  const [couponError, setCouponError] = useState<string | null>(null);
 
   const items = useCartStore((s) => s.items);
   const clearCart = useCartStore((s) => s.clearCart);
   const products = useCatalogStore((s) => s.products);
+  const updateStock = useCatalogStore((s) => s.updateStock);
   const placeOrder = useOrderStore((s) => s.placeOrder);
+  const quote = useShippingStore((s) => s.quote);
+  const validateCode = useDiscountStore((s) => s.validateCode);
+  const incrementUsage = useDiscountStore((s) => s.incrementUsage);
+  const upsertFromOrder = useCustomerStore((s) => s.upsertFromOrder);
+  const logAdjustment = useInventoryStore((s) => s.logAdjustment);
+  const log = useActivityStore((s) => s.log);
 
   const lines = useMemo(
     () =>
@@ -69,9 +83,27 @@ export default function CheckoutPage() {
     (sum, { item, product }) => sum + product.price * item.quantity,
     0
   );
-  const shippingInfo = getDemoShipping(form.country);
+
+  const departments = useMemo(
+    () => [...new Set(lines.map(({ product }) => product.department))],
+    [lines]
+  );
+
+  const discountResult = useMemo(() => {
+    if (!appliedCode) return null;
+    return validateCode(appliedCode, subtotal, departments);
+  }, [appliedCode, subtotal, departments, validateCode]);
+
+  const freeShippingPromo =
+    discountResult?.ok === true && discountResult.discount.type === "free_shipping";
+  const discountAmount =
+    discountResult?.ok === true && discountResult.discount.type !== "free_shipping"
+      ? discountResult.amount
+      : 0;
+
+  const shippingInfo = quote(form.country, subtotal, freeShippingPromo);
   const shipping = shippingInfo.amount;
-  const total = subtotal + shipping;
+  const total = Math.max(0, subtotal - discountAmount + shipping);
 
   useEffect(() => {
     if (!mounted) return;
@@ -85,6 +117,19 @@ export default function CheckoutPage() {
     value: CheckoutForm[K]
   ) => {
     setForm((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const applyCoupon = () => {
+    setCouponError(null);
+    const result = validateCode(couponInput, subtotal, departments);
+    if (!result.ok) {
+      setAppliedCode(null);
+      setCouponError(result.error);
+      toast.error(result.error);
+      return;
+    }
+    setAppliedCode(result.discount.code);
+    toast.success(`Applied ${result.discount.code}`);
   };
 
   const validate = (): string | null => {
@@ -103,6 +148,14 @@ export default function CheckoutPage() {
     if (form.country === "United States" && !form.postalCode.trim()) {
       return "Please enter a ZIP code.";
     }
+    if (!shippingInfo.label || shippingInfo.label === "Unavailable") {
+      return "Shipping is unavailable for the selected destination in demo settings.";
+    }
+    for (const { item, product } of lines) {
+      if (product.stock < item.quantity) {
+        return `${product.name} only has ${product.stock} in stock.`;
+      }
+    }
     return null;
   };
 
@@ -120,8 +173,30 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (appliedCode) {
+      const recheck = validateCode(appliedCode, subtotal, departments);
+      if (!recheck.ok) {
+        setAppliedCode(null);
+        toast.error(recheck.error);
+        return;
+      }
+    }
+
     setSubmitting(true);
     try {
+      for (const { item, product } of lines) {
+        const next = Math.max(0, product.stock - item.quantity);
+        updateStock(product.id, next);
+        logAdjustment({
+          productId: product.id,
+          previousStock: product.stock,
+          nextStock: next,
+          delta: -item.quantity,
+          reason: `Checkout order — stock reserved`,
+          adminName: "Storefront Demo",
+        });
+      }
+
       const order = placeOrder({
         items: lines.map(({ item, product }) => ({
           productId: product.id,
@@ -134,6 +209,8 @@ export default function CheckoutPage() {
         })),
         subtotal,
         shipping,
+        discountAmount: discountAmount || undefined,
+        discountCode: appliedCode ?? undefined,
         total,
         paymentMethod,
         shippingAddress: {
@@ -147,6 +224,20 @@ export default function CheckoutPage() {
           postalCode: form.postalCode.trim(),
         },
       });
+
+      if (appliedCode && discountResult?.ok) {
+        incrementUsage(discountResult.discount.id);
+      }
+
+      upsertFromOrder(order);
+      log({
+        type: "order_placed",
+        description: `Demo checkout created ${order.orderNumber}`,
+        entityType: "order",
+        entityId: order.id,
+        adminName: "Storefront Demo",
+      });
+
       clearCart();
       toast.success("Demo order placed");
       router.push(`/order-confirmation?order=${order.id}`);
@@ -171,6 +262,29 @@ export default function CheckoutPage() {
       ? "ZIP code"
       : "Postal code (optional)";
 
+  const totalsBlock = (
+    <div className="space-y-1.5 text-sm">
+      <div className="flex justify-between">
+        <span className="text-muted">Subtotal</span>
+        <span className="tabular-nums">{formatUSD(subtotal)}</span>
+      </div>
+      {discountAmount > 0 ? (
+        <div className="flex justify-between text-pink">
+          <span>Discount ({appliedCode})</span>
+          <span className="tabular-nums">-{formatUSD(discountAmount)}</span>
+        </div>
+      ) : null}
+      <div className="flex justify-between">
+        <span className="text-muted">{shippingInfo.label}</span>
+        <span className="tabular-nums">{formatUSD(shipping)}</span>
+      </div>
+      <div className="flex justify-between border-t border-border pt-2 font-semibold">
+        <span>Total</span>
+        <span className="tabular-nums">{formatUSD(total)}</span>
+      </div>
+    </div>
+  );
+
   return (
     <div className="mx-auto max-w-6xl px-3 py-6 sm:px-6 sm:py-10 lg:py-14">
       <div className="mb-5 sm:mb-8">
@@ -184,10 +298,10 @@ export default function CheckoutPage() {
 
       <div className="mb-5 border border-gold/40 bg-gold/10 px-3 py-2.5 text-[13px] text-ink sm:mb-8 sm:px-4 sm:py-3 sm:text-sm">
         <strong className="font-semibold">Demo checkout.</strong> No real
-        payment is processed. Shipping rates are illustrative only.
+        payment is processed. Shipping rates and discounts are sample values
+        managed in the admin demo.
       </div>
 
-      {/* Mobile expandable order summary */}
       <details className="mb-6 border border-border bg-soft-white lg:hidden">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-sm font-medium marker:content-none [&::-webkit-details-marker]:hidden">
           <span>Order summary ({lines.length})</span>
@@ -222,20 +336,7 @@ export default function CheckoutPage() {
               </li>
             ))}
           </ul>
-          <div className="mt-4 space-y-1.5 border-t border-border pt-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted">Subtotal</span>
-              <span className="tabular-nums">{formatUSD(subtotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted">{shippingInfo.label}</span>
-              <span className="tabular-nums">{formatUSD(shipping)}</span>
-            </div>
-            <div className="flex justify-between pt-1 font-semibold">
-              <span>Total</span>
-              <span className="tabular-nums">{formatUSD(total)}</span>
-            </div>
-          </div>
+          <div className="mt-4 border-t border-border pt-3">{totalsBlock}</div>
         </div>
       </details>
 
@@ -356,6 +457,47 @@ export default function CheckoutPage() {
           </section>
 
           <section className="space-y-4">
+            <h2 className="font-display text-lg text-ink sm:text-xl">
+              Discount code
+            </h2>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                placeholder="Enter code"
+                aria-label="Discount code"
+              />
+              <Button type="button" variant="outline" onClick={applyCoupon}>
+                Apply
+              </Button>
+              {appliedCode ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setAppliedCode(null);
+                    setCouponError(null);
+                  }}
+                >
+                  Remove
+                </Button>
+              ) : null}
+            </div>
+            {couponError ? (
+              <p className="text-xs text-red-600">{couponError}</p>
+            ) : appliedCode ? (
+              <p className="text-xs text-green-700">
+                {appliedCode} applied
+                {freeShippingPromo ? " · free shipping" : ""}.
+              </p>
+            ) : (
+              <p className="text-xs text-muted">
+                Try a demo code from Admin → Discounts (e.g. WELCOME10).
+              </p>
+            )}
+          </section>
+
+          <section className="space-y-4">
             <h2 className="font-display text-lg text-ink sm:text-xl">Payment</h2>
             <p className="text-xs text-muted">
               Demonstration only — no card numbers or payment credentials are
@@ -433,22 +575,11 @@ export default function CheckoutPage() {
             ))}
           </ul>
 
-          <div className="mt-5 space-y-2 border-t border-border pt-4 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted">Subtotal</span>
-              <span className="font-medium">{formatUSD(subtotal)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted">{shippingInfo.label}</span>
-              <span className="font-medium">{formatUSD(shipping)}</span>
-            </div>
-            <p className="text-[11px] leading-relaxed text-muted">
+          <div className="mt-5 border-t border-border pt-4">
+            {totalsBlock}
+            <p className="mt-2 text-[11px] leading-relaxed text-muted">
               Illustrative demo rates — not final shipping pricing.
             </p>
-            <div className="flex justify-between border-t border-border pt-3 text-base">
-              <span className="font-medium text-ink">Total (USD)</span>
-              <span className="font-semibold text-ink">{formatUSD(total)}</span>
-            </div>
           </div>
 
           <Button
@@ -465,7 +596,6 @@ export default function CheckoutPage() {
           </Button>
         </aside>
 
-        {/* Mobile sticky place order */}
         <div
           className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-white/95 px-3 py-3 backdrop-blur lg:hidden"
           style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}

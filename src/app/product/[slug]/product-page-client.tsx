@@ -8,7 +8,11 @@ import { useCatalogStore } from "@/store/catalog-store";
 export function ProductPageClient({ slug }: { slug: string }) {
   const product = useCatalogStore((s) => s.getBySlug(slug));
 
-  if (!product || product.status === "draft") {
+  if (
+    !product ||
+    product.status === "draft" ||
+    product.status === "archived"
+  ) {
     return (
       <div className="mx-auto flex max-w-lg flex-col items-center px-4 py-24 text-center lg:px-8">
         <p className="text-xs font-semibold uppercase tracking-wider text-pink">

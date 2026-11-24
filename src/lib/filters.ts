@@ -18,7 +18,9 @@ export function filterProducts(
   products: Product[],
   filters: ProductFilters
 ): Product[] {
-  let result = products.filter((p) => p.status !== "draft");
+  let result = products.filter(
+    (p) => p.status !== "draft" && p.status !== "archived"
+  );
 
   if (filters.department && filters.department !== "all") {
     result = result.filter((p) => p.department === filters.department);

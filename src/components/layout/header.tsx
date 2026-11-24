@@ -36,6 +36,7 @@ const DRAWER_NAV = [
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
   { href: "/delivery-returns", label: "Delivery & Returns" },
+  { href: "/admin/login", label: "Admin Dashboard" },
 ];
 
 export function Header({
